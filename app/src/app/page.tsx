@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getCurrentUser } from '../../lib/supabase/auth-server'
+import { getCurrentUser } from '../lib/supabase/auth-server'
 
 export default async function Home() {
   const user = await getCurrentUser()
