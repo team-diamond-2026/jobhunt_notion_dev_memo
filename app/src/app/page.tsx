@@ -1,11 +1,11 @@
-import { redirect } from 'next/navigation'
-import { getCurrentUser } from '../lib/supabase/auth-server'
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "../lib/supabase/auth-server";
 
 export default async function Home() {
-  const user = await getCurrentUser()
+  const user = await getCurrentUser();
 
   if (!user) {
-    redirect('/login')
+    redirect("/login");
   }
 
   return (
@@ -51,15 +51,17 @@ export default async function Home() {
                   <dd className="text-gray-900">{user.email}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">ユーザーID</dt>
+                  <dt className="text-sm font-medium text-gray-500">
+                    ユーザーID
+                  </dt>
                   <dd className="text-gray-900 font-mono text-sm">{user.id}</dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500">登録日</dt>
                   <dd className="text-gray-900">
                     {user.created_at
-                      ? new Date(user.created_at).toLocaleDateString('ja-JP')
-                      : '取得不可'}
+                      ? new Date(user.created_at).toLocaleDateString("ja-JP")
+                      : "取得不可"}
                   </dd>
                 </div>
               </dl>
@@ -79,5 +81,5 @@ export default async function Home() {
         </div>
       </main>
     </div>
-  )
+  );
 }
