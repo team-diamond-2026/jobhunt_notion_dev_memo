@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getCurrentUser } from '../../lib/supabase/auth-server'
+import { getCurrentUser } from '../lib/supabase/auth-server'
 
 export default async function Home() {
   const user = await getCurrentUser()
@@ -18,7 +18,7 @@ export default async function Home() {
               <span className="text-gray-700">
                 {user.user_metadata?.display_name || user.email}
               </span>
-              <form action="/api/logout" method="post">
+              <form action="/logout" method="post">
                 <button
                   type="submit"
                   className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition"

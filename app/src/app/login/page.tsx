@@ -10,6 +10,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [isSignUp, setIsSignUp] = useState(false)
   const [displayName, setDisplayName] = useState('')
 
@@ -17,12 +18,13 @@ export default function LoginPage() {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
+    setSuccessMessage(null)
 
     try {
       if (isSignUp) {
         // サインアップ処理
         await signUp(email, password, displayName)
-        alert('サインアップに成功しました。メールを確認してください。')
+        setSuccessMessage('サインアップに成功しました。メールを確認してください。')
         setIsSignUp(false)
         setDisplayName('')
       } else {
@@ -54,6 +56,12 @@ export default function LoginPage() {
         {error && (
           <div className="rounded-md bg-red-50 p-4">
             <p className="text-sm font-medium text-red-800">{error}</p>
+          </div>
+        )}
+
+        {successMessage && (
+          <div className="rounded-md bg-green-50 p-4">
+            <p className="text-sm font-medium text-green-800">{successMessage}</p>
           </div>
         )}
 
