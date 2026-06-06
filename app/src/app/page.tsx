@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "../lib/supabase/auth-server";
+import Link from "next/link";
 
 export default async function Home() {
   const user = await getCurrentUser();
@@ -76,6 +77,13 @@ export default async function Home() {
                 <li>✓ ログイン/ログアウト機能が動作中</li>
                 <li>→ 追加機能の実装を開始できます</li>
               </ul>
+
+              <Link
+                href="/companies"
+                className="inline-block mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+              >
+                企業一覧へ進む
+              </Link>
             </div>
           </div>
         </div>
