@@ -16,7 +16,13 @@ export async function signUp(email: string, password: string, displayName?: stri
     },
   })
   
-  if (error) throw error
+  if (error) {
+    // レート制限エラーを含むエラーメッセージを保持
+    const errorMessage = error.message || "サインアップに失敗しました"
+    const customError = new Error(errorMessage)
+    throw customError
+  }
+  
   return data
 }
 

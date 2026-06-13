@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { signIn, signUp } from "../../lib/supabase/auth";
 
@@ -13,6 +13,20 @@ export default function LoginPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSignUp, setIsSignUp] = useState(false);
   const [displayName, setDisplayName] = useState("");
+  const [signUpCooldown, setSignUpCooldown] = useState(0);
+  const signUpTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // クールダウンタイマー
+  useEffect(() => {
+    if (signUpCooldown > 0) {
+      signUpTimeoutRef.current = setTimeout(() => {
+        setSignUpCooldown(signUpCooldown - 1);
+      }, 1000);
+    }
+    return () => {
+      if (signUpTimeoutRef.current) clearTimeout(signUpTimeoutRef.current);
+    };
+  }, [signUpCooldown]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,13 +36,25 @@ export default function LoginPage() {
 
     try {
       if (isSignUp) {
+        // クールダウン中かチェック
+        if (signUpCooldown > 0) {
+          setError(`サインアップは ${signUpCooldown} 秒後に再度お試しください。`);
+          setIsLoading(false);
+          return;
+        }
+
         // サインアップ処理
         await signUp(email, password, displayName);
         setSuccessMessage(
-          "サインアップに成功しました。メールを確認してください。",
+          "アカウント作成に成功しました。確認メールを送信しましたので、メール内のリンクをクリックして確認してください。確認後にログインできます。",
         );
         setIsSignUp(false);
         setDisplayName("");
+        setEmail("");
+        setPassword("");
+        
+        // 60秒のクールダウンを設定
+        setSignUpCooldown(60);
       } else {
         // ログイン処理
         await signIn(email, password);
@@ -36,11 +62,28 @@ export default function LoginPage() {
         router.push("/");
       }
     } catch (err) {
+      let errorMessage = "エラーが発生しました";
+      
       if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("エラーが発生しました");
+        const message = err.message;
+        
+        // レート制限エラーの判定
+        if (message.includes("rate limit") || message.includes("too many")) {
+          errorMessage = "短時間に何度もメールが送信されています。数分待ってから再度お試しください。";
+          // レート制限エラーの場合は60秒クールダウン
+          setSignUpCooldown(60);
+        } else if (message.includes("Email not confirmed")) {
+          errorMessage = "メールアドレスが確認されていません。メールを確認してください";
+        } else if (message.includes("Invalid login credentials")) {
+          errorMessage = "メールアドレスまたはパスワードが正しくありません。";
+        } else if (message.includes("User already registered")) {
+          errorMessage = "このメールアドレスは既に登録されています。";
+        } else {
+          errorMessage = message;
+        }
       }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -120,10 +163,16 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || (isSignUp && signUpCooldown > 0)}
             className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? "処理中..." : isSignUp ? "アカウント作成" : "ログイン"}
+            {isLoading 
+              ? "処理中..." 
+              : isSignUp 
+                ? signUpCooldown > 0 
+                  ? `${signUpCooldown}秒待機中...`
+                  : "アカウント作成"
+                : "ログイン"}
           </button>
 
           <button
