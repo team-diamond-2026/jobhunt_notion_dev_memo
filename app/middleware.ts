@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+export const runtime = "edge";
+
 // Middleware は Edge ランタイムで動作するため、Node 固有のモジュールを読み込めません。
 // ここでは Node ランタイムの API Route (`/api/session`) を呼び出してセッションを更新します。
 
@@ -7,10 +9,13 @@ export async function middleware(req: NextRequest) {
   try {
     // session API の絶対 URL を安全に構築（host があればそちらを使う）
     const host = req.headers.get("host");
-    const proto = req.headers.get("x-forwarded-proto") ?? "https";
+    const proto =
+      req.headers.get("x-forwarded-proto") ??
+      new URL(req.url).protocol.replace(":", "") ??
+      "https";
     const sessionUrl = host
       ? `${proto}://${host}/api/session`
-      : new URL("/api/session", new URL(req.url)).toString();
+      : new URL("/api/session", req.url).toString();
 
     // リクエストの Cookie を API にフォワードする
     const cookieHeader = req.headers.get("cookie") ?? "";
@@ -25,7 +30,7 @@ export async function middleware(req: NextRequest) {
     // レスポンス本体を読み取り、必要なら後続リクエストに情報を渡す
     const json = await apiRes.json().catch(() => null);
 
-    const response = NextResponse.next({ request: req });
+    const response = NextResponse.next();
 
     // 任意: ユーザー情報を downstream に伝えたい場合はヘッダを付与（小さくしておく）
     if (json && json.user) {
@@ -37,12 +42,12 @@ export async function middleware(req: NextRequest) {
     }
 
     return response;
-  } catch (err) {
+  } catch {
     // どこかで例外が発生してもリクエスト自体は継続させる
-    return NextResponse.next({ request: req });
+    return NextResponse.next();
   }
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon\.|.*\\.svg).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon\\.|.*\\.svg).*)"],
 };
