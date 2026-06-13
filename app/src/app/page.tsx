@@ -1,92 +1,209 @@
-import { redirect } from "next/navigation";
-import { getCurrentUser } from "../lib/supabase/auth-server";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "../lib/supabase/server";
+
+type Company = {
+  id: string;
+  user_id: string;
+  company_name: string;
+  industry: string | null;
+  motivation_level: number;
+  selection_status: string;
+  memo: string | null;
+  created_at: string;
+  updated_at: string;
+};
 
 export default async function Home() {
-  const user = await getCurrentUser();
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
     redirect("/login");
   }
 
+  const { data, error } = await supabase
+    .from("companies")
+    .select("*")
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    throw new Error(`企業データの取得に失敗しました: ${error.message}`);
+  }
+
+  const companies = (data ?? []) as Company[];
+
+  const totalCompanies = companies.length;
+  const notEnteredCount = companies.filter(
+    (company) => company.selection_status === "未エントリー",
+  ).length;
+  const interviewCount = companies.filter((company) =>
+    ["1次面接", "2次面接", "最終面接"].includes(company.selection_status),
+  ).length;
+  const offerCount = companies.filter(
+    (company) => company.selection_status === "内定",
+  ).length;
+
+  const recentCompanies = companies.slice(0, 5);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <h1 className="text-xl font-bold text-gray-900">Job Hunt</h1>
-            <div className="flex items-center gap-4">
-              <span className="text-gray-700">
-                {user.user_metadata?.display_name || user.email}
-              </span>
-              <form action="/logout" method="post">
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
-                >
-                  ログアウト
-                </button>
-              </form>
-            </div>
+    <div className="min-h-screen bg-slate-100">
+      <nav className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-black">Job Hunt Dashboard</h1>
+
+          <div className="flex items-center gap-4">
+            <span className="text-slate-700">
+              {user.user_metadata?.display_name || user.email}
+            </span>
+
+            <form action="/logout" method="post">
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700"
+              >
+                ログアウト
+              </button>
+            </form>
           </div>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+      <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+        <section className="bg-white rounded-xl shadow p-8">
+          <h2 className="text-3xl font-bold text-black mb-3">
             ようこそ、{user.user_metadata?.display_name || user.email}さん
           </h2>
-          <p className="text-gray-600 mb-6">
-            このアプリケーションへようこそ。認証システムが正常に機能しています。
+          <p className="text-slate-600">
+            就活管理アプリのダッシュボードです。企業情報や選考状況をここから確認できます。
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="border border-gray-200 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                ユーザー情報
-              </h3>
-              <dl className="space-y-2">
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Email</dt>
-                  <dd className="text-gray-900">{user.email}</dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">
-                    ユーザーID
-                  </dt>
-                  <dd className="text-gray-900 font-mono text-sm">{user.id}</dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">登録日</dt>
-                  <dd className="text-gray-900">
-                    {user.created_at
-                      ? new Date(user.created_at).toLocaleDateString("ja-JP")
-                      : "取得不可"}
-                  </dd>
-                </div>
-              </dl>
-            </div>
+          <div className="flex flex-wrap gap-3 mt-6">
+            <Link
+              href="/companies"
+              className="px-5 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700"
+            >
+              企業一覧を見る
+            </Link>
 
-            <div className="border border-gray-200 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                次のステップ
-              </h3>
-              <ul className="space-y-2 text-gray-700">
-                <li>✓ 認証システムのテスト完了</li>
-                <li>✓ ログイン/ログアウト機能が動作中</li>
-                <li>→ 追加機能の実装を開始できます</li>
-              </ul>
+            <Link
+              href="/companies/board"
+              className="px-5 py-2 rounded-md bg-slate-800 text-white hover:bg-slate-900"
+            >
+              選考管理ボードを見る
+            </Link>
 
-              <Link
-                href="/companies"
-                className="inline-block mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-              >
-                企業一覧へ進む
+            <Link
+              href="/companies?status=未エントリー"
+              className="px-5 py-2 rounded-md bg-slate-200 text-black hover:bg-slate-300"
+            >
+              未エントリーを確認
+            </Link>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+          <div className="bg-white rounded-xl shadow p-6">
+            <p className="text-sm text-slate-500 mb-2">登録企業数</p>
+            <p className="text-3xl font-bold text-black">{totalCompanies}</p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow p-6">
+            <p className="text-sm text-slate-500 mb-2">未エントリー</p>
+            <p className="text-3xl font-bold text-black">{notEnteredCount}</p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow p-6">
+            <p className="text-sm text-slate-500 mb-2">面接中</p>
+            <p className="text-3xl font-bold text-black">{interviewCount}</p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow p-6">
+            <p className="text-sm text-slate-500 mb-2">内定</p>
+            <p className="text-3xl font-bold text-black">{offerCount}</p>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <div className="bg-white rounded-xl shadow p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-2xl font-bold text-black">最近更新した企業</h3>
+              <Link href="/companies" className="text-blue-600 hover:underline">
+                一覧を見る
               </Link>
             </div>
+
+            {recentCompanies.length === 0 ? (
+              <p className="text-slate-500">まだ企業が登録されていません。</p>
+            ) : (
+              <div className="space-y-3">
+                {recentCompanies.map((company) => (
+                  <div
+                    key={company.id}
+                    className="border rounded-lg p-4 flex items-center justify-between gap-4"
+                  >
+                    <div className="min-w-0">
+                      <Link
+                        href={`/companies/${company.id}`}
+                        className="font-semibold text-black hover:text-blue-600 hover:underline"
+                      >
+                        {company.company_name}
+                      </Link>
+
+                      <p className="text-sm text-slate-600 mt-1">
+                        業界: {company.industry || "未設定"}
+                      </p>
+                    </div>
+
+                    <span className="shrink-0 px-3 py-1 rounded-full bg-slate-100 text-black text-sm">
+                      {company.selection_status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
+
+          <div className="bg-white rounded-xl shadow p-6">
+            <h3 className="text-2xl font-bold text-black mb-4">アカウント情報</h3>
+
+            <dl className="space-y-4">
+              <div>
+                <dt className="text-sm text-slate-500">メールアドレス</dt>
+                <dd className="text-black">{user.email}</dd>
+              </div>
+
+              <div>
+                <dt className="text-sm text-slate-500">ユーザーID</dt>
+                <dd className="text-black break-all">{user.id}</dd>
+              </div>
+
+              <div>
+                <dt className="text-sm text-slate-500">登録日</dt>
+                <dd className="text-black">
+                  {user.created_at
+                    ? new Date(user.created_at).toLocaleDateString("ja-JP")
+                    : "取得不可"}
+                </dd>
+              </div>
+            </dl>
+
+            <div className="mt-6 border-t pt-6">
+              <h4 className="text-lg font-semibold text-black mb-3">
+                次のおすすめ実装
+              </h4>
+              <ul className="space-y-2 text-slate-700">
+                <li>・面接ログ機能の追加</li>
+                <li>・ES管理ページの追加</li>
+                <li>・締切タスク管理の追加</li>
+                <li>・カレンダー表示の追加</li>
+              </ul>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
   );

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "../../lib/supabase/server";
-import { createCompany } from "./actions";
+import { createCompany, deleteCompany } from "./actions";
 
 type Company = {
   id: string;
@@ -15,7 +15,14 @@ type Company = {
   updated_at: string;
 };
 
-export default async function CompaniesPage() {
+type PageProps = {
+  searchParams: Promise<{
+    keyword?: string;
+    status?: string;
+  }>;
+};
+
+export default async function CompaniesPage({ searchParams }: PageProps) {
   const supabase = await createClient();
 
   const {
@@ -26,10 +33,24 @@ export default async function CompaniesPage() {
     redirect("/login");
   }
 
-  const { data, error } = await supabase
+  const resolvedSearchParams = await searchParams;
+  const keyword = String(resolvedSearchParams.keyword ?? "").trim();
+  const status = String(resolvedSearchParams.status ?? "all").trim();
+
+  let query = supabase
     .from("companies")
     .select("*")
     .order("created_at", { ascending: false });
+
+  if (keyword) {
+    query = query.ilike("company_name", `%${keyword}%`);
+  }
+
+  if (status !== "all") {
+    query = query.eq("selection_status", status);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(`企業一覧の取得に失敗しました: ${error.message}`);
@@ -46,6 +67,13 @@ export default async function CompaniesPage() {
           <div className="flex items-center gap-4">
             <Link href="/" className="text-blue-600 hover:underline">
               ホームへ戻る
+            </Link>
+
+            <Link
+              href="/companies/board"
+              className="px-4 py-2 rounded-md bg-slate-800 text-white hover:bg-slate-900"
+            >
+              ボード表示
             </Link>
 
             <form action="/logout" method="post">
@@ -72,7 +100,7 @@ export default async function CompaniesPage() {
                 type="text"
                 required
                 placeholder="例: 株式会社サンプル"
-                className="w-full border text-black px-3 py-2"
+                className="w-full border text-black px-3 py-2 rounded-md"
               />
             </div>
 
@@ -82,7 +110,7 @@ export default async function CompaniesPage() {
                 name="industry"
                 type="text"
                 placeholder="例: IT / 小売 / 通信"
-                className="w-full border text-black px-3 py-2"
+                className="w-full border text-black px-3 py-2 rounded-md"
               />
             </div>
 
@@ -91,7 +119,7 @@ export default async function CompaniesPage() {
               <select
                 name="motivation_level"
                 defaultValue="0"
-                className="w-full border text-black px-3 py-2"
+                className="w-full border text-black px-3 py-2 rounded-md"
               >
                 <option value="0">0</option>
                 <option value="1">1</option>
@@ -103,13 +131,11 @@ export default async function CompaniesPage() {
             </div>
 
             <div>
-              <label className="block text-black mb-1">
-                選考ステータス
-              </label>
+              <label className="block text-black mb-1">選考ステータス</label>
               <select
                 name="selection_status"
                 defaultValue="未エントリー"
-                className="w-full border text-black px-3 py-2"
+                className="w-full border text-black px-3 py-2 rounded-md"
               >
                 <option value="未エントリー">未エントリー</option>
                 <option value="ES提出">ES提出</option>
@@ -128,7 +154,7 @@ export default async function CompaniesPage() {
                 name="memo"
                 rows={4}
                 placeholder="企業研究メモなど"
-                className="w-full border text-black px-3 py-2"
+                className="w-full border text-black px-3 py-2 rounded-md"
               />
             </div>
 
@@ -142,19 +168,97 @@ export default async function CompaniesPage() {
         </section>
 
         <section className="bg-white rounded-xl shadow p-6">
-          <h2 className="text-2xl font-bold text-slate-900 mb-4">登録済み企業</h2>
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between mb-4">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900">登録済み企業</h2>
+              <p className="text-slate-600 mt-1">検索結果: {companies.length} 件</p>
+            </div>
+
+            <form method="get" className="grid gap-3 md:grid-cols-3">
+              <div>
+                <label className="block text-black mb-1">企業名検索</label>
+                <input
+                  name="keyword"
+                  type="text"
+                  defaultValue={keyword}
+                  placeholder="企業名で検索"
+                  className="w-full border text-black px-3 py-2 rounded-md"
+                />
+              </div>
+
+              <div>
+                <label className="block text-black mb-1">ステータス絞り込み</label>
+                <select
+                  name="status"
+                  defaultValue={status}
+                  className="w-full border text-black px-3 py-2 rounded-md"
+                >
+                  <option value="all">すべて</option>
+                  <option value="未エントリー">未エントリー</option>
+                  <option value="ES提出">ES提出</option>
+                  <option value="Webテスト">Webテスト</option>
+                  <option value="1次面接">1次面接</option>
+                  <option value="2次面接">2次面接</option>
+                  <option value="最終面接">最終面接</option>
+                  <option value="内定">内定</option>
+                  <option value="お祈り">お祈り</option>
+                </select>
+              </div>
+
+              <div className="flex items-end gap-2">
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-md bg-slate-800 text-white hover:bg-slate-900"
+                >
+                  検索
+                </button>
+
+                <Link
+                  href="/companies"
+                  className="px-4 py-2 rounded-md bg-slate-200 text-black hover:bg-slate-300"
+                >
+                  リセット
+                </Link>
+              </div>
+            </form>
+          </div>
 
           {companies.length === 0 ? (
-            <p className="text-slate-500">まだ企業が登録されていません。</p>
+            <p className="text-slate-500">条件に一致する企業がありません。</p>
           ) : (
             <div className="grid gap-4">
               {companies.map((company) => (
                 <div key={company.id} className="border rounded-lg p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-black font-semibold">{company.company_name}</h3>
-                    <span className="text-black px-3 py-1 rounded-full bg-slate-100">
-                      {company.selection_status}
-                    </span>
+                  <div className="flex items-center justify-between gap-4">
+                    <Link
+                      href={`/companies/${company.id}`}
+                      className="text-black font-semibold hover:text-blue-600 hover:underline"
+                    >
+                      {company.company_name}
+                    </Link>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-black px-3 py-1 rounded-full bg-slate-100">
+                        {company.selection_status}
+                      </span>
+
+                      <Link
+                        href={`/companies/${company.id}/edit`}
+                        className="px-3 py-1 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700"
+                      >
+                        編集
+                      </Link>
+
+                      <form action={deleteCompany}>
+                        <input type="hidden" name="company_id" value={company.id} />
+                        <button
+                          type="submit"
+                          className="px-3 py-1 rounded-md bg-red-600 text-white text-sm hover:bg-red-700"
+                        >
+                          削除
+                        </button>
+                      </form>
+                    </div>
                   </div>
 
                   <p className="text-sm text-slate-600">
