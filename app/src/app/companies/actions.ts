@@ -4,9 +4,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "../../lib/supabase/server";
 
-/**
- * 企業登録
- */
 export async function createCompany(formData: FormData) {
   const supabase = await createClient();
 
@@ -48,9 +45,6 @@ export async function createCompany(formData: FormData) {
   revalidatePath("/companies");
 }
 
-/**
- * 企業削除
- */
 export async function deleteCompany(formData: FormData) {
   const supabase = await createClient();
 
@@ -81,9 +75,6 @@ export async function deleteCompany(formData: FormData) {
   revalidatePath("/companies");
 }
 
-/**
- * 企業更新
- */
 export async function updateCompany(formData: FormData) {
   const supabase = await createClient();
 
