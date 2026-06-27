@@ -1,0 +1,4 @@
+interface:
+  display_name: "Jobhunt Issue Workflow"
+  short_description: "Assign issues before work and always publish implementation PRs."
+  default_prompt: "Use this workflow for this project's GitHub issue implementation tasks."
