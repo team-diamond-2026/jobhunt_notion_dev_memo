@@ -42,6 +42,44 @@ export async function signIn(email: string, password: string) {
 }
 
 /**
+ * Send a password reset email.
+ */
+export async function requestPasswordReset(email: string, redirectTo: string) {
+  const supabase = createClient()
+
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo,
+  })
+
+  if (error) throw error
+  return data
+}
+
+/**
+ * Exchange a Supabase auth callback code for a session.
+ */
+export async function exchangePasswordResetCode(code: string) {
+  const supabase = createClient()
+
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+
+  if (error) throw error
+  return data
+}
+
+/**
+ * Update the current user's password after a reset session is established.
+ */
+export async function updatePassword(password: string) {
+  const supabase = createClient()
+
+  const { data, error } = await supabase.auth.updateUser({ password })
+
+  if (error) throw error
+  return data
+}
+
+/**
  * ユーザーをログアウトする
  */
 export async function signOut() {
