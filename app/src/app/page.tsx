@@ -60,6 +60,10 @@ export default async function Home() {
               {user.user_metadata?.display_name || user.email}
             </span>
 
+            <Link href="/settings" className="text-sm text-blue-600 hover:underline">
+              設定
+            </Link>
+
             <form action="/logout" method="post">
               <button
                 type="submit"

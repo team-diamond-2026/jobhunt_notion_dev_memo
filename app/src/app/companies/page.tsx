@@ -125,6 +125,9 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
             >
               選考ボード
             </Link>
+            <Link href="/settings" className="text-sm text-blue-600 hover:underline">
+              設定
+            </Link>
             <form action="/logout" method="post">
               <button
                 type="submit"

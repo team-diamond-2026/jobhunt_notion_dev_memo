@@ -67,6 +67,10 @@ export default async function CompaniesBoardPage() {
               企業一覧へ戻る
             </Link>
 
+            <Link href="/settings" className="text-blue-600 hover:underline">
+              設定
+            </Link>
+
             <form action="/logout" method="post">
               <button
                 type="submit"
