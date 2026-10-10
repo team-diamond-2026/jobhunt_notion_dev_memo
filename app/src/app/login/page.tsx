@@ -47,23 +47,23 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-dvh flex items-center justify-center bg-gray-50 py-6 px-4 sm:py-12 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-center text-2xl sm:text-3xl font-extrabold text-gray-900">
             {isSignUp ? "アカウント作成" : "ログイン"}
           </h2>
         </div>
 
         {error && (
           <div className="rounded-md bg-red-50 p-4">
-            <p className="text-sm font-medium text-red-800">{error}</p>
+            <p className="text-base sm:text-sm font-medium text-red-800 [overflow-wrap:anywhere]">{error}</p>
           </div>
         )}
 
         {successMessage && (
           <div className="rounded-md bg-green-50 p-4">
-            <p className="text-sm font-medium text-green-800">
+            <p className="text-base sm:text-sm font-medium text-green-800 [overflow-wrap:anywhere]">
               {successMessage}
             </p>
           </div>
@@ -78,10 +78,11 @@ export default function LoginPage() {
               <input
                 id="displayName"
                 type="text"
+                autoComplete="nickname"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="表示名"
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block min-h-11 w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-base text-gray-900 rounded-t-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
               />
             </div>
           )}
@@ -93,13 +94,15 @@ export default function LoginPage() {
             <input
               id="email"
               type="email"
+              autoComplete="email"
+              autoCapitalize="none"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="メールアドレス"
               required
-              className={`appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 ${
+              className={`appearance-none rounded-none relative block min-h-11 w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-base text-gray-900 ${
                 isSignUp ? "rounded-none" : "rounded-t-md"
-              } focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
+              } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
             />
           </div>
 
@@ -110,18 +113,19 @@ export default function LoginPage() {
             <input
               id="password"
               type="password"
+              autoComplete={isSignUp ? "new-password" : "current-password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="パスワード"
               required
-              className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+              className="appearance-none rounded-none relative block min-h-11 w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-base text-gray-900 rounded-b-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
             />
           </div>
 
           <button
             type="submit"
             disabled={isLoading}
-            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="group relative min-h-11 w-full flex items-center justify-center py-2 px-4 border border-transparent text-base sm:text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? "処理中..." : isSignUp ? "アカウント作成" : "ログイン"}
           </button>
@@ -132,7 +136,7 @@ export default function LoginPage() {
               setIsSignUp(!isSignUp);
               setError(null);
             }}
-            className="w-full text-sm text-blue-600 hover:text-blue-500"
+            className="min-h-11 w-full rounded-md px-2 py-2 text-base sm:text-sm text-blue-600 hover:text-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
           >
             {isSignUp ? "ログイン画面に戻る" : "アカウントを作成する"}
           </button>
