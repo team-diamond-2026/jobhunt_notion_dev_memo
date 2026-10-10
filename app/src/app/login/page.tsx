@@ -10,6 +10,21 @@ import {
 
 type AuthMode = "login" | "signup" | "reset";
 
+function getDefaultViewPath(settings: unknown) {
+  if (typeof settings !== "object" || settings === null || !("default_view" in settings)) {
+    return "/";
+  }
+
+  switch ((settings as { default_view?: unknown }).default_view) {
+    case "companies":
+      return "/companies";
+    case "board":
+      return "/companies/board";
+    default:
+      return "/";
+  }
+}
+
 function getFriendlyError(error: unknown) {
   if (!(error instanceof Error)) {
     return "エラーが発生しました。時間をおいてもう一度お試しください。";
@@ -108,8 +123,8 @@ export default function LoginPage() {
         return;
       }
 
-      await signIn(email, password);
-      router.push("/");
+      const { user } = await signIn(email, password);
+      router.push(getDefaultViewPath(user?.user_metadata?.settings));
     } catch (err) {
       setError(getFriendlyError(err));
     } finally {

@@ -13,14 +13,137 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  .theme-system {
     --background: #0a0a0a;
     --foreground: #ededed;
   }
+}
+
+.dark {
+  --background: #020617;
+  --foreground: #e5e7eb;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+.dark .bg-white {
+  background-color: #0f172a;
+}
+
+.dark .bg-slate-100,
+.dark .bg-gray-50 {
+  background-color: #020617;
+}
+
+@media (prefers-color-scheme: dark) {
+  .theme-system .bg-slate-100,
+  .theme-system .bg-gray-50 {
+    background-color: #020617;
+  }
+}
+
+.dark .bg-slate-50,
+.dark .bg-slate-200,
+.dark .bg-slate-300 {
+  background-color: #1e293b;
+}
+
+@media (prefers-color-scheme: dark) {
+  .theme-system .bg-white {
+    background-color: #0f172a;
+  }
+
+  .theme-system .bg-slate-50,
+  .theme-system .bg-slate-200,
+  .theme-system .bg-slate-300 {
+    background-color: #1e293b;
+  }
+}
+
+.dark .text-black,
+.dark .text-slate-950,
+.dark .text-slate-900,
+.dark .text-gray-900 {
+  color: #f8fafc;
+}
+
+@media (prefers-color-scheme: dark) {
+  .theme-system .text-black,
+  .theme-system .text-slate-950,
+  .theme-system .text-slate-900,
+  .theme-system .text-gray-900 {
+    color: #f8fafc;
+  }
+}
+
+.dark .text-slate-800,
+.dark .text-slate-700,
+.dark .text-gray-700 {
+  color: #cbd5e1;
+}
+
+@media (prefers-color-scheme: dark) {
+  .theme-system .text-slate-800,
+  .theme-system .text-slate-700,
+  .theme-system .text-gray-700 {
+    color: #cbd5e1;
+  }
+}
+
+.dark .text-slate-600,
+.dark .text-slate-500,
+.dark .text-gray-600 {
+  color: #94a3b8;
+}
+
+@media (prefers-color-scheme: dark) {
+  .theme-system .text-slate-600,
+  .theme-system .text-slate-500,
+  .theme-system .text-gray-600 {
+    color: #94a3b8;
+  }
+}
+
+.dark .border,
+.dark .border-b,
+.dark .border-t,
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-slate-300,
+.dark .border-gray-300 {
+  border-color: #334155;
+}
+
+@media (prefers-color-scheme: dark) {
+  .theme-system .border,
+  .theme-system .border-b,
+  .theme-system .border-t,
+  .theme-system .border-slate-100,
+  .theme-system .border-slate-200,
+  .theme-system .border-slate-300,
+  .theme-system .border-gray-300 {
+    border-color: #334155;
+  }
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #0f172a;
+  border-color: #475569;
+  color: #f8fafc;
+}
+
+@media (prefers-color-scheme: dark) {
+  .theme-system input,
+  .theme-system select,
+  .theme-system textarea {
+    background-color: #0f172a;
+    border-color: #475569;
+    color: #f8fafc;
+  }
 }

@@ -7,10 +7,10 @@ Issue #29で採用するMVPの進捗KPIと集計条件です。
 | KPI | データ元 | 集計条件 |
 | --- | --- | --- |
 | 登録企業数 | `companies` | ユーザーが登録した企業の総数 |
-| 未エントリー | `companies.selection_status` | `未エントリー` の企業数 |
+| 未応募 | `companies.selection_status` | `未応募` の企業数 |
 | ES提出 | `companies.selection_status` | `ES提出` の企業数 |
 | Webテスト | `companies.selection_status` | `Webテスト` の企業数 |
-| 面接中 | `companies.selection_status` | `1次面接`、`2次面接`、`最終面接` の企業数 |
+| 面接中 | `companies.selection_status` | `一次面接`、`二次面接`、`最終面接` の企業数 |
 | 内定 | `companies.selection_status` | `内定` の企業数 |
 
 `辞退` は選考ボード・企業編集・企業詳細で独立したステータスとして扱う。

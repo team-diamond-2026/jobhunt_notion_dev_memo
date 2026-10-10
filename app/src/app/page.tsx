@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "../lib/supabase/server";
+import { SELECTION_STATUS_OPTIONS } from "../lib/selection-status";
 
 type Company = {
   id: string;
@@ -44,7 +45,7 @@ export default async function Home() {
 
   const totalCompanies = companies.length;
   const notEnteredCount = companies.filter(
-    (company) => company.selection_status === "未エントリー",
+    (company) => company.selection_status === SELECTION_STATUS_OPTIONS[0],
   ).length;
   const esSubmittedCount = companies.filter(
     (company) => company.selection_status === "ES提出",
@@ -53,7 +54,7 @@ export default async function Home() {
     (company) => company.selection_status === "Webテスト",
   ).length;
   const interviewCount = companies.filter((company) =>
-    ["1次面接", "2次面接", "最終面接"].includes(company.selection_status),
+    ["一次面接", "二次面接", "最終面接"].includes(company.selection_status),
   ).length;
   const offerCount = companies.filter(
     (company) => company.selection_status === "内定",
@@ -66,7 +67,7 @@ export default async function Home() {
       description: "登録されている企業の合計",
     },
     {
-      label: "未エントリー",
+      label: "未応募",
       value: notEnteredCount,
       description: "選考を開始していない企業",
     },
@@ -83,7 +84,7 @@ export default async function Home() {
     {
       label: "面接中",
       value: interviewCount,
-      description: "1次・2次・最終面接の企業",
+      description: "一次・二次・最終面接の企業",
     },
     {
       label: "内定",
@@ -104,6 +105,10 @@ export default async function Home() {
             <span className="text-slate-700">
               {user.user_metadata?.display_name || user.email}
             </span>
+
+            <Link href="/settings" className="text-sm text-blue-600 hover:underline">
+              設定
+            </Link>
 
             <form action="/logout" method="post">
               <button
@@ -142,10 +147,10 @@ export default async function Home() {
             </Link>
 
             <Link
-              href="/companies?status=未エントリー"
+              href={`/companies?status=${SELECTION_STATUS_OPTIONS[0]}`}
               className="px-5 py-2 rounded-md bg-slate-200 text-black hover:bg-slate-300"
             >
-              未エントリーを確認
+              未応募を確認
             </Link>
           </div>
         </section>
