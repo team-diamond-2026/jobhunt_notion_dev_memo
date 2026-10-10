@@ -1,7 +1,8 @@
 export const SELECTION_STATUS_OPTIONS = [
   "未応募",
   "応募済み",
-  "書類選考中",
+  "ES提出",
+  "Webテスト",
   "一次面接",
   "二次面接",
   "最終面接",
@@ -14,8 +15,6 @@ export type SelectionStatus = (typeof SELECTION_STATUS_OPTIONS)[number];
 
 const LEGACY_STATUS_MAP: Record<string, SelectionStatus> = {
   未エントリー: "未応募",
-  ES提出: "応募済み",
-  Webテスト: "書類選考中",
   "1次面接": "一次面接",
   "2次面接": "二次面接",
   お祈り: "不採用",

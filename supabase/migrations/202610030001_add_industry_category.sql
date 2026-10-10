@@ -3,4 +3,3 @@ alter table public.companies
 
 create index if not exists idx_companies_industry_category
   on public.companies(industry_category);
-

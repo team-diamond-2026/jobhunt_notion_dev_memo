@@ -1,8 +1,9 @@
 update public.companies
 set selection_status = case selection_status
   when '未エントリー' then '未応募'
-  when 'ES提出' then '応募済み'
-  when 'Webテスト' then '書類選考中'
+  when 'ES提出' then 'ES提出'
+  when 'Webテスト' then 'Webテスト'
+  when '書類選考中' then 'Webテスト'
   when '1次面接' then '一次面接'
   when '2次面接' then '二次面接'
   when 'お祈り' then '不採用'
@@ -13,6 +14,7 @@ where selection_status in (
   '未エントリー',
   'ES提出',
   'Webテスト',
+  '書類選考中',
   '1次面接',
   '2次面接',
   'お祈り',
@@ -34,7 +36,8 @@ begin
       check (selection_status in (
         '未応募',
         '応募済み',
-        '書類選考中',
+        'ES提出',
+        'Webテスト',
         '一次面接',
         '二次面接',
         '最終面接',
