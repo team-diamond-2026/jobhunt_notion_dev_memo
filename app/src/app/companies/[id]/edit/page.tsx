@@ -136,6 +136,7 @@ export default async function CompanyEditPage({ params }: PageProps) {
                 <option value="最終面接">最終面接</option>
                 <option value="内定">内定</option>
                 <option value="お祈り">お祈り</option>
+                <option value="辞退">辞退</option>
               </select>
             </div>
 

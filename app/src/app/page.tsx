@@ -14,6 +14,12 @@ type Company = {
   updated_at: string;
 };
 
+type Kpi = {
+  label: string;
+  value: number;
+  description: string;
+};
+
 export default async function Home() {
   const supabase = await createClient();
 
@@ -40,12 +46,51 @@ export default async function Home() {
   const notEnteredCount = companies.filter(
     (company) => company.selection_status === "未エントリー",
   ).length;
+  const esSubmittedCount = companies.filter(
+    (company) => company.selection_status === "ES提出",
+  ).length;
+  const webTestCount = companies.filter(
+    (company) => company.selection_status === "Webテスト",
+  ).length;
   const interviewCount = companies.filter((company) =>
     ["1次面接", "2次面接", "最終面接"].includes(company.selection_status),
   ).length;
   const offerCount = companies.filter(
     (company) => company.selection_status === "内定",
   ).length;
+
+  const kpis: Kpi[] = [
+    {
+      label: "登録企業数",
+      value: totalCompanies,
+      description: "登録されている企業の合計",
+    },
+    {
+      label: "未エントリー",
+      value: notEnteredCount,
+      description: "選考を開始していない企業",
+    },
+    {
+      label: "ES提出",
+      value: esSubmittedCount,
+      description: "ES提出の企業",
+    },
+    {
+      label: "Webテスト",
+      value: webTestCount,
+      description: "Webテストの企業",
+    },
+    {
+      label: "面接中",
+      value: interviewCount,
+      description: "1次・2次・最終面接の企業",
+    },
+    {
+      label: "内定",
+      value: offerCount,
+      description: "内定ステータスの企業",
+    },
+  ];
 
   const recentCompanies = companies.slice(0, 5);
 
@@ -105,26 +150,17 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-          <div className="bg-white rounded-xl shadow p-6">
-            <p className="text-sm text-slate-500 mb-2">登録企業数</p>
-            <p className="text-3xl font-bold text-black">{totalCompanies}</p>
-          </div>
-
-          <div className="bg-white rounded-xl shadow p-6">
-            <p className="text-sm text-slate-500 mb-2">未エントリー</p>
-            <p className="text-3xl font-bold text-black">{notEnteredCount}</p>
-          </div>
-
-          <div className="bg-white rounded-xl shadow p-6">
-            <p className="text-sm text-slate-500 mb-2">面接中</p>
-            <p className="text-3xl font-bold text-black">{interviewCount}</p>
-          </div>
-
-          <div className="bg-white rounded-xl shadow p-6">
-            <p className="text-sm text-slate-500 mb-2">内定</p>
-            <p className="text-3xl font-bold text-black">{offerCount}</p>
-          </div>
+        <section
+          aria-label="選考進捗サマリー"
+          className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4"
+        >
+          {kpis.map((kpi) => (
+            <article key={kpi.label} className="rounded-xl bg-white p-6 shadow">
+              <p className="mb-2 text-sm text-slate-500">{kpi.label}</p>
+              <p className="text-3xl font-bold text-black">{kpi.value}</p>
+              <p className="mt-2 text-sm text-slate-600">{kpi.description}</p>
+            </article>
+          ))}
         </section>
 
         <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">

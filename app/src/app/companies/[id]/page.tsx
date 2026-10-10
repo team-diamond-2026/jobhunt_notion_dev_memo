@@ -30,6 +30,7 @@ const STATUS_OPTIONS = [
   "最終面接",
   "内定",
   "お祈り",
+  "辞退",
 ];
 
 function formatDateTime(value: string) {
