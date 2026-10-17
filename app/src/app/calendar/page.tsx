@@ -7,6 +7,7 @@ import {
   CalendarView,
   dateKeyToStartIso,
   eventDateKey,
+  eventOccursOnDate,
   formatDateLabel,
   formatEventDateTime,
   formatEventTime,
@@ -105,29 +106,30 @@ export default async function CalendarPage({ searchParams }: PageProps) {
   const view: CalendarView = params.view === "week" ? "week" : "month";
   const anchorKey = normalizeDateKey(params.date) ?? todayDateKey();
   const period = getCalendarPeriod(view, anchorKey);
+  const periodStartIso = dateKeyToStartIso(period.startKey);
   const queryResult = isLocalPreview
     ? {
-        data: getPreviewEvents(todayDateKey()).filter((event) => {
-          const dateKey = eventDateKey(event.start_at);
-          return dateKey >= period.startKey && dateKey < period.endKeyExclusive;
-        }),
+        data: getPreviewEvents(todayDateKey()).filter((event) =>
+          period.dayKeys.some((dateKey) => eventOccursOnDate(event, dateKey)),
+        ),
         error: null,
       }
     : await supabase
         .from("events")
         .select(CALENDAR_EVENT_COLUMNS)
-        .gte("start_at", dateKeyToStartIso(period.startKey))
         .lt("start_at", dateKeyToStartIso(period.endKeyExclusive))
+        .or(`start_at.gte.${periodStartIso},end_at.gt.${periodStartIso}`)
         .order("start_at", { ascending: true });
   const { data, error } = queryResult;
   const events = (data ?? []) as CalendarEvent[];
   const eventsByDate = new Map<string, CalendarEvent[]>();
 
-  for (const event of events) {
-    const dateKey = eventDateKey(event.start_at);
-    const dayEvents = eventsByDate.get(dateKey) ?? [];
-    dayEvents.push(event);
-    eventsByDate.set(dateKey, dayEvents);
+  for (const dateKey of period.dayKeys) {
+    const dayEvents = events.filter((event) => eventOccursOnDate(event, dateKey));
+
+    if (dayEvents.length > 0) {
+      eventsByDate.set(dateKey, dayEvents);
+    }
   }
 
   const selectedEvent = params.event

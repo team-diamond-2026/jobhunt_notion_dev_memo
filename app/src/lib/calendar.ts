@@ -23,6 +23,19 @@ export type CalendarEvent = {
   related_company_id: string | null;
 };
 
+export type EventFormFields = {
+  title: string;
+  event_type: string;
+  start_at: string;
+  end_at: string;
+  related_company_id: string;
+};
+
+export type EventFormState = {
+  error: string | null;
+  values: EventFormFields;
+};
+
 export const EVENT_TYPE_OPTIONS = [
   { value: "briefing", label: "説明会" },
   { value: "interview", label: "面接" },
@@ -110,6 +123,15 @@ export function todayDateKey(now = new Date()) {
 
 export function eventDateKey(value: string) {
   return todayDateKey(new Date(value));
+}
+
+export function eventOccursOnDate(event: CalendarEvent, dateKey: string) {
+  const dayStart = Date.parse(dateKeyToStartIso(dateKey));
+  const dayEnd = Date.parse(dateKeyToStartIso(shiftDateKey(dateKey, 1)));
+  const eventStart = Date.parse(event.start_at);
+  const eventEnd = event.end_at ? Date.parse(event.end_at) : eventStart;
+
+  return eventStart < dayEnd && (eventStart >= dayStart || eventEnd > dayStart);
 }
 
 export function shiftDateKey(value: string, amount: number) {
