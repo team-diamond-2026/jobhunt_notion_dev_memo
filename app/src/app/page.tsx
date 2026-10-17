@@ -3,7 +3,12 @@ import { redirect } from "next/navigation";
 import { createClient } from "../lib/supabase/server";
 import { SELECTION_STATUS_OPTIONS } from "../lib/selection-status";
 import { UpcomingEvents } from "@/components/calendar/upcoming-events";
-import { CalendarEvent } from "@/lib/calendar";
+import {
+  CalendarEvent,
+  CALENDAR_EVENT_COLUMNS,
+  getUpcomingEventRange,
+  UPCOMING_EVENT_LIMIT,
+} from "@/lib/calendar";
 
 type Company = {
   id: string;
@@ -51,15 +56,14 @@ export default async function Home() {
   ).length;
 
   const recentCompanies = companies.slice(0, 5);
-  const now = new Date();
-  const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const upcomingRange = getUpcomingEventRange();
   const { data: eventData, error: eventError } = await supabase
     .from("events")
-    .select("id,title,event_type,start_at,end_at,related_company_id")
-    .gte("start_at", now.toISOString())
-    .lt("start_at", sevenDaysLater.toISOString())
+    .select(CALENDAR_EVENT_COLUMNS)
+    .gte("start_at", upcomingRange.startAt)
+    .lt("start_at", upcomingRange.endAtExclusive)
     .order("start_at", { ascending: true })
-    .limit(5);
+    .limit(UPCOMING_EVENT_LIMIT);
   const upcomingEvents = (eventData ?? []) as CalendarEvent[];
 
   return (
@@ -91,7 +95,7 @@ export default async function Home() {
 
       <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
         <section className="bg-white rounded-xl shadow p-8">
-          <h2 className="text-3xl font-bold text-black mb-3">
+          <h2 className="text-3xl font-bold text-black mb-3 [overflow-wrap:anywhere]">
             ようこそ、{user.user_metadata?.display_name || user.email}さん
           </h2>
           <p className="text-slate-600">
@@ -162,7 +166,7 @@ export default async function Home() {
 
         <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <div className="bg-white rounded-xl shadow p-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
               <h3 className="text-2xl font-bold text-black">最近更新した企業</h3>
               <Link href="/companies" className="text-blue-600 hover:underline">
                 一覧を見る
@@ -181,12 +185,12 @@ export default async function Home() {
                     <div className="min-w-0">
                       <Link
                         href={`/companies/${company.id}`}
-                        className="font-semibold text-black hover:text-blue-600 hover:underline"
+                        className="font-semibold text-black [overflow-wrap:anywhere] hover:text-blue-600 hover:underline"
                       >
                         {company.company_name}
                       </Link>
 
-                      <p className="text-sm text-slate-600 mt-1">
+                      <p className="text-sm text-slate-600 mt-1 [overflow-wrap:anywhere]">
                         業界: {company.industry || "未設定"}
                       </p>
                     </div>
@@ -206,7 +210,7 @@ export default async function Home() {
             <dl className="space-y-4">
               <div>
                 <dt className="text-sm text-slate-500">メールアドレス</dt>
-                <dd className="text-black">{user.email}</dd>
+                <dd className="text-black [overflow-wrap:anywhere]">{user.email}</dd>
               </div>
 
               <div>
