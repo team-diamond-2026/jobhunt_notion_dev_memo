@@ -1,4 +1,16 @@
 export const APP_TIME_ZONE = "Asia/Tokyo";
+export const CALENDAR_EVENT_COLUMNS = "id,title,event_type,start_at,end_at,related_company_id";
+export const UPCOMING_EVENT_DAYS = 7;
+export const UPCOMING_EVENT_LIMIT = 5;
+
+export function getUpcomingEventRange(now = new Date()) {
+  return {
+    startAt: now.toISOString(),
+    endAtExclusive: new Date(
+      now.getTime() + UPCOMING_EVENT_DAYS * 24 * 60 * 60 * 1000,
+    ).toISOString(),
+  };
+}
 
 export type CalendarView = "month" | "week";
 
