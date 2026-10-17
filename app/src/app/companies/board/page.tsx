@@ -1,3 +1,4 @@
+import { PageHeading } from "@/components/page-heading";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "../../../lib/supabase/server";
@@ -43,52 +44,16 @@ export default async function CompaniesBoardPage() {
   }));
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <nav className="bg-white border-b">
-        <div className="max-w-7xl mx-auto h-16 px-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-black">選考管理ボード</h1>
+    <div className="ui-workspace">
+      <main id="main-content" className="ui-main space-y-6">
+        <PageHeading title="選考ボード" description="企業を選考状況ごとに確認できます。横にスクロールして各段階を見渡せます。" />
 
-          <div className="flex items-center gap-4">
-            <Link href="/" className="text-blue-600 hover:underline">
-              ダッシュボードへ戻る
-            </Link>
-
-            <Link href="/companies" className="text-blue-600 hover:underline">
-              企業一覧へ戻る
-            </Link>
-
-            <Link href="/settings" className="text-blue-600 hover:underline">
-              設定
-            </Link>
-
-            <form action="/logout" method="post">
-              <button
-                type="submit"
-                className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700"
-              >
-                ログアウト
-              </button>
-            </form>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-[1600px] mx-auto px-4 py-8 space-y-6">
-        <section className="bg-white rounded-xl shadow p-6">
-          <h2 className="text-2xl font-bold text-black mb-2">
-            選考状況を一覧で確認
-          </h2>
-          <p className="text-slate-600">
-            企業を選考ステータスごとに並べて確認できます。
-          </p>
-        </section>
-
-        <section className="overflow-x-auto">
-          <div className="grid grid-flow-col auto-cols-[320px] gap-4 min-w-max">
+        <section className="overflow-x-auto rounded-xl pb-4" tabIndex={0} aria-label="選考状況ごとの企業。左右にスクロールできます">
+          <div className="grid grid-flow-col auto-cols-[min(20rem,85vw)] gap-4 min-w-max">
             {groupedCompanies.map((group) => (
               <div
                 key={group.status}
-                className="bg-white rounded-xl shadow p-4 flex flex-col gap-4 min-h-[500px]"
+                className="ui-panel flex flex-col gap-4 min-h-[500px]"
               >
                 <div className="flex items-center justify-between border-b pb-3">
                   <h3 className="text-lg font-bold text-black">{group.status}</h3>
@@ -107,7 +72,7 @@ export default async function CompaniesBoardPage() {
                       <Link
                         key={company.id}
                         href={`/companies/${company.id}`}
-                        className="block border rounded-lg p-4 hover:border-blue-400 hover:bg-blue-50 transition"
+                        className="ui-board-card"
                       >
                         <h4 className="font-semibold text-black">
                           {company.company_name}

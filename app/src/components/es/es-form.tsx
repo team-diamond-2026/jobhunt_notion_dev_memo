@@ -48,7 +48,7 @@ export function EsForm({
             name="company_id"
             required
             defaultValue={document?.company_id ?? defaultCompanyId ?? ""}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+            className="ui-field"
           >
             <option value="" disabled>企業を選択</option>
             {companies.map((company) => (
@@ -68,7 +68,7 @@ export function EsForm({
             name="doc_type"
             required
             defaultValue={document?.doc_type ?? "entry_sheet"}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+            className="ui-field"
           >
             {ES_DOCUMENT_TYPE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -91,7 +91,7 @@ export function EsForm({
           maxLength={120}
           defaultValue={document?.title ?? ""}
           placeholder="例: 本選考 エントリーシート"
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+          className="ui-field"
         />
       </div>
 
@@ -105,7 +105,7 @@ export function EsForm({
           rows={18}
           defaultValue={document?.content ?? ""}
           placeholder="設問、回答、推敲中のメモを入力"
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 leading-7 text-slate-950"
+          className="ui-field leading-7"
         />
         <p className="mt-1 text-xs text-slate-500">本文が空でも下書きとして保存できます。</p>
       </div>
@@ -113,11 +113,11 @@ export function EsForm({
       <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
         <Link
           href={document ? `/es/${document.id}` : "/es"}
-          className="rounded-md border border-slate-300 px-5 py-2 text-center text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="ui-button ui-secondary"
         >
           キャンセル
         </Link>
-        <button type="submit" className="rounded-md bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700">
+        <button type="submit" className="ui-button ui-primary">
           {submitLabel}
         </button>
       </div>

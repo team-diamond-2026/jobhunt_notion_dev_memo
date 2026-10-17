@@ -125,6 +125,7 @@ export default function LoginPage() {
 
       const { user } = await signIn(email, password);
       router.push(getDefaultViewPath(user?.user_metadata?.settings));
+      router.refresh();
     } catch (err) {
       setError(getFriendlyError(err));
     } finally {
@@ -139,11 +140,12 @@ export default function LoginPage() {
       : "ログイン";
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
-      <div className="mx-auto flex min-h-[calc(100vh-6rem)] w-full max-w-md items-center">
-        <section className="w-full space-y-8">
+    <main className="min-h-dvh bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto flex min-h-[calc(100dvh-6rem)] w-full max-w-md items-center">
+        <section className="ui-auth-card w-full space-y-8">
           <header className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
+            <p className="ui-eyebrow">SHUKATSU OS</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{title}</h1>
             <p className="mt-3 text-sm text-gray-600">
               {isReset
                 ? "登録済みのメールアドレスに再設定リンクを送ります。"
@@ -152,14 +154,14 @@ export default function LoginPage() {
           </header>
 
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <p className="text-sm font-medium text-red-800">{error}</p>
+            <div className="ui-feedback ui-feedback-error" role="alert">
+              <p className="text-sm font-medium">{error}</p>
             </div>
           )}
 
           {successMessage && (
-            <div className="rounded-md bg-green-50 p-4">
-              <p className="text-sm font-medium text-green-800">
+            <div className="ui-feedback ui-feedback-success" role="status">
+              <p className="text-sm font-medium">
                 {successMessage}
               </p>
             </div>
@@ -180,7 +182,7 @@ export default function LoginPage() {
                   value={displayName}
                   onChange={(event) => setDisplayName(event.target.value)}
                   placeholder="山田 太郎"
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm"
+                  className="ui-field"
                 />
               </div>
             )}
@@ -200,7 +202,7 @@ export default function LoginPage() {
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="you@example.com"
                 required
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm"
+                className="ui-field"
               />
             </div>
 
@@ -221,7 +223,7 @@ export default function LoginPage() {
                   placeholder="6文字以上"
                   minLength={6}
                   required
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm"
+                  className="ui-field"
                 />
               </div>
             )}
@@ -229,7 +231,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading || (isSignUp && signUpCooldown > 0)}
-              className="flex w-full justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="ui-button ui-primary w-full"
             >
               {isLoading
                 ? "処理中..."
@@ -248,7 +250,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => switchMode("reset")}
-                className="text-blue-600 hover:text-blue-500"
+                className="ui-link"
               >
                 パスワードを忘れた方
               </button>
@@ -259,7 +261,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => switchMode("login")}
-                  className="text-blue-600 hover:text-blue-500"
+                  className="ui-link"
                 >
                   ログイン画面に戻る
                 </button>
@@ -267,7 +269,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => switchMode("signup")}
-                  className="text-blue-600 hover:text-blue-500"
+                  className="ui-link"
                 >
                   アカウントを作成する
                 </button>
@@ -278,7 +280,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => switchMode("login")}
-                className="text-blue-600 hover:text-blue-500"
+                className="ui-link"
               >
                 ログイン画面に戻る
               </button>

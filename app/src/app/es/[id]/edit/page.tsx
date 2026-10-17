@@ -1,3 +1,4 @@
+import { PageHeading } from "@/components/page-heading";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { EsForm } from "@/components/es/es-form";
@@ -40,19 +41,12 @@ export default async function EsEditPage({ params, searchParams }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <nav className="border-b bg-white">
-        <div className="mx-auto flex min-h-16 max-w-4xl items-center justify-between gap-3 px-4 py-3">
-          <div>
-            <p className="text-xs font-medium text-blue-600">ES管理</p>
-            <h1 className="text-xl font-bold text-slate-950 sm:text-2xl">ESを編集</h1>
-          </div>
-          <Link href={`/es/${id}`} className="text-sm font-medium text-blue-600 hover:underline">詳細へ戻る</Link>
-        </div>
-      </nav>
+    <div className="ui-workspace">
+      <div className="ui-toolbar ui-toolbar-narrow"><Link href={`/es/${id}`} className="ui-link">← ES詳細へ戻る</Link></div>
 
-      <main className="mx-auto max-w-4xl px-3 py-6 sm:px-4 sm:py-8">
-        <section className="rounded-xl bg-white p-5 shadow sm:p-7">
+      <main id="main-content" className="ui-main ui-main-narrow space-y-6">
+        <PageHeading title="ESを編集" description="内容を更新して、最新の下書きを保存しましょう。" />
+        <section className="ui-panel">
           <EsForm action={updateEsDocument} companies={companies ?? []} document={document as EsDocument} error={query.error} submitLabel="変更を保存" />
         </section>
       </main>
