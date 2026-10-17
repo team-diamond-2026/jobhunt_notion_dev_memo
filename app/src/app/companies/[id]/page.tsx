@@ -1,3 +1,4 @@
+import { StatusBadge } from "@/components/status-badge";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "../../../lib/supabase/server";
@@ -66,34 +67,10 @@ export default async function CompanyDetailPage({ params }: PageProps) {
   const motivationLevel = Math.min(Math.max(company.motivation_level, 0), 5);
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <nav className="border-b bg-white">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-          <Link href="/companies" className="text-blue-600 hover:underline">
-            企業一覧へ戻る
-          </Link>
+    <div className="ui-workspace">
+      <div className="ui-toolbar"><Link href="/companies" className="ui-link">← 企業一覧へ戻る</Link><Link href={`/companies/${company.id}/edit`} className="ui-button ui-primary">詳細編集</Link></div>
 
-          <div className="flex items-center gap-3">
-            <Link
-              href={`/companies/${company.id}/edit`}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              詳細編集
-            </Link>
-
-            <form action="/logout" method="post">
-              <button
-                type="submit"
-                className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-              >
-                ログアウト
-              </button>
-            </form>
-          </div>
-        </div>
-      </nav>
-
-      <main className="mx-auto max-w-6xl px-4 py-8">
+      <main id="main-content" className="ui-main space-y-6">
         <header className="mb-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
@@ -107,9 +84,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white">
-                {company.selection_status}
-              </span>
+              <StatusBadge status={company.selection_status} />
               <span className="rounded-full bg-amber-100 px-4 py-2 text-sm font-medium text-amber-900">
                 志望度 {motivationLevel}/5
               </span>
@@ -119,7 +94,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
 
         <div className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
           <section className="space-y-6">
-            <div className="rounded-xl bg-white p-6 shadow">
+            <div className="ui-panel">
               <h2 className="text-xl font-bold text-slate-950">基本情報</h2>
 
               <dl className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -153,7 +128,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
               </dl>
             </div>
 
-            <div className="rounded-xl bg-white p-6 shadow">
+            <div className="ui-panel">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <h2 className="text-xl font-bold text-slate-950">
                   選考履歴・現在地
@@ -202,7 +177,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
               </ol>
             </div>
 
-            <div className="rounded-xl bg-white p-6 shadow">
+            <div className="ui-panel">
               <h2 className="text-xl font-bold text-slate-950">メモ</h2>
               <div className="mt-4 min-h-32 rounded-lg border border-slate-200 bg-slate-50 p-4">
                 <p className="whitespace-pre-wrap text-slate-800">
@@ -213,7 +188,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
           </section>
 
           <aside className="space-y-6">
-            <form action={updateCompany} className="rounded-xl bg-white p-6 shadow">
+            <form action={updateCompany} className="ui-panel">
               <input type="hidden" name="company_id" value={company.id} />
               <input
                 type="hidden"
@@ -242,7 +217,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
                     id="motivation_level"
                     name="motivation_level"
                     defaultValue={String(company.motivation_level)}
-                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+                    className="ui-field"
                   >
                     <option value="0">0</option>
                     <option value="1">1</option>
@@ -264,7 +239,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
                     id="selection_status"
                     name="selection_status"
                     defaultValue={company.selection_status}
-                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+                    className="ui-field"
                   >
                     {SELECTION_STATUS_OPTIONS.map((status, index) => (
                       <option
@@ -290,37 +265,37 @@ export default async function CompanyDetailPage({ params }: PageProps) {
                     name="memo"
                     rows={8}
                     defaultValue={company.memo ?? ""}
-                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+                    className="ui-field"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  className="ui-button ui-primary w-full"
                 >
                   更新する
                 </button>
               </div>
             </form>
 
-            <div className="rounded-xl bg-white p-6 shadow">
+            <div className="ui-panel">
               <h2 className="text-xl font-bold text-slate-950">関連導線</h2>
               <div className="mt-4 grid gap-3">
                 <Link
                   href="/companies/board"
-                  className="rounded-md bg-slate-900 px-4 py-2 text-center text-sm font-medium text-white hover:bg-slate-800"
+                  className="ui-button ui-primary"
                 >
                   選考ボードで見る
                 </Link>
                 <Link
                   href={`/companies/${company.id}/edit`}
-                  className="rounded-md bg-slate-200 px-4 py-2 text-center text-sm font-medium text-slate-950 hover:bg-slate-300"
+                  className="ui-button ui-secondary"
                 >
                   企業情報を編集
                 </Link>
                 <Link
                   href={`/es?company=${company.id}`}
-                  className="rounded-md bg-emerald-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-emerald-700"
+                  className="ui-button ui-primary"
                 >
                   この企業のESを見る
                 </Link>

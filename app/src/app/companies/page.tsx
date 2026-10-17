@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "../../lib/supabase/server";
-import { createCompany, deleteCompany } from "./actions";
-import { IndustryFields } from "./industry-fields";
+import { deleteCompany } from "./actions";
+import { CompanyCreateForm } from "./create-form";
+import { PageHeading } from "@/components/page-heading";
+import { StatusBadge } from "@/components/status-badge";
 import { SELECTION_STATUS_OPTIONS } from "../../lib/selection-status";
 
 type Company = {
@@ -101,343 +103,87 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
   const hasFilters = Boolean(keyword || industry || status !== "all");
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <nav className="border-b bg-white">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
-          <h1 className="text-2xl font-bold text-slate-950">企業一覧</h1>
+    <div className="ui-workspace">
+      <main id="main-content" className="ui-main space-y-6">
+        <PageHeading title="企業一覧" description="気になる企業と選考状況を整理して、次の準備につなげましょう。" />
 
-          <div className="flex items-center gap-3">
-            <Link href="/" className="text-sm text-blue-600 hover:underline">
-              ダッシュボード
-            </Link>
-            <Link
-              href="/companies/board"
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-            >
-              選考ボード
-            </Link>
-            <Link href="/settings" className="text-sm text-blue-600 hover:underline">
-              設定
-            </Link>
-            <form action="/logout" method="post">
-              <button
-                type="submit"
-                className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-              >
-                ログアウト
-              </button>
-            </form>
-          </div>
-        </div>
-      </nav>
+        <details id="add-company" className="ui-panel group">
+          <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 font-semibold">
+            <span>＋ 企業を追加</span>
+            <span className="text-sm font-normal text-slate-600 group-open:hidden">開いて登録フォームを表示</span>
+            <span className="hidden text-sm font-normal text-slate-600 group-open:inline">閉じる</span>
+          </summary>
+          <CompanyCreateForm />
+        </details>
 
-      <main className="mx-auto max-w-7xl space-y-8 px-4 py-8">
-        <section className="rounded-xl bg-white p-6 shadow">
-          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+        <section className="ui-panel" aria-labelledby="company-results-title">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-2xl font-bold text-slate-950">
-                企業を追加
-              </h2>
-              <p className="mt-1 text-sm text-slate-600">
-                応募予定や選考中の企業を登録して、一覧からすぐ見返せます。
-              </p>
+              <h2 id="company-results-title" className="text-xl font-bold">登録済み企業</h2>
+              <p className="mt-1 text-sm text-slate-600">企業名・業界・選考状況から、確認したい企業を見つけられます。</p>
             </div>
-            <span className="text-sm text-slate-500">
-              登録済み {companies.length} 件
-            </span>
+            <Link href="/companies/board" className="ui-button ui-secondary">選考ボードで見る</Link>
           </div>
 
-          <form action={createCompany} className="mt-5 grid gap-4 lg:grid-cols-5">
-            <div className="lg:col-span-2">
-              <label
-                htmlFor="company_name"
-                className="block text-sm font-medium text-slate-700"
-              >
-                企業名 *
-              </label>
-              <input
-                id="company_name"
-                name="company_name"
-                type="text"
-                required
-                placeholder="例: 株式会社サンプル"
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
-              />
-            </div>
-
-            <IndustryFields />
-
+          <form method="get" role="search" aria-label="企業の検索と絞り込み" className="ui-search-form">
             <div>
-              <label
-                htmlFor="motivation_level"
-                className="block text-sm font-medium text-slate-700"
-              >
-                志望度
-              </label>
-              <select
-                id="motivation_level"
-                name="motivation_level"
-                defaultValue="3"
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
-              >
-                <option value="0">0</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
+              <label htmlFor="keyword" className="ui-label">企業名</label>
+              <input id="keyword" name="keyword" type="search" defaultValue={keyword} placeholder="企業名で検索" className="ui-field" />
+            </div>
+            <div>
+              <label htmlFor="filter-industry" className="ui-label">業界</label>
+              <input id="filter-industry" name="industry" type="search" defaultValue={industry} placeholder="例: IT・通信" className="ui-field" />
+            </div>
+            <div>
+              <label htmlFor="status" className="ui-label">選考状況</label>
+              <select id="status" name="status" defaultValue={status} className="ui-field">
+                <option value="all">すべての状況</option>
+                {SELECTION_STATUS_OPTIONS.map((option) => <option key={option}>{option}</option>)}
               </select>
             </div>
-
             <div>
-              <label
-                htmlFor="selection_status"
-                className="block text-sm font-medium text-slate-700"
-              >
-                選考状況
-              </label>
-              <select
-                id="selection_status"
-                name="selection_status"
-                defaultValue={SELECTION_STATUS_OPTIONS[0]}
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
-              >
-                {SELECTION_STATUS_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
+              <label htmlFor="sort" className="ui-label">並び順</label>
+              <select id="sort" name="sort" defaultValue={sort} className="ui-field">
+                {SORT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
             </div>
-
-            <div className="lg:col-span-4">
-              <label
-                htmlFor="memo"
-                className="block text-sm font-medium text-slate-700"
-              >
-                メモ
-              </label>
-              <textarea
-                id="memo"
-                name="memo"
-                rows={3}
-                placeholder="企業研究メモ、気になる点、次に確認すること"
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
-              />
-            </div>
-
-            <div className="flex items-end">
-              <button
-                type="submit"
-                disabled
-                className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-              >
-                企業を登録
-              </button>
+            <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-4">
+              <button type="submit" className="ui-button ui-primary flex-1 sm:flex-none">検索する</button>
+              <Link href="/companies" className="ui-button ui-secondary flex-1 sm:flex-none">条件をクリア</Link>
             </div>
           </form>
-        </section>
 
-        <section className="rounded-xl bg-white p-6 shadow">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-950">
-                登録済み企業
-              </h2>
-              <p className="mt-1 text-sm text-slate-600">
-                検索結果: {companies.length} 件
-              </p>
-            </div>
-
-            <form method="get" className="grid gap-3 md:grid-cols-5">
-              <div>
-                <label
-                  htmlFor="keyword"
-                  className="block text-sm font-medium text-slate-700"
-                >
-                  企業名
-                </label>
-                <input
-                  id="keyword"
-                  name="keyword"
-                  type="search"
-                  defaultValue={keyword}
-                  placeholder="企業名で検索"
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="industry"
-                  className="block text-sm font-medium text-slate-700"
-                >
-                  業界
-                </label>
-                <input
-                  id="industry"
-                  name="industry"
-                  type="search"
-                  defaultValue={industry}
-                  placeholder="業界で絞り込み"
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="status"
-                  className="block text-sm font-medium text-slate-700"
-                >
-                  選考状況
-                </label>
-                <select
-                  id="status"
-                  name="status"
-                  defaultValue={status}
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
-                >
-                  <option value="all">すべて</option>
-                  {SELECTION_STATUS_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="sort"
-                  className="block text-sm font-medium text-slate-700"
-                >
-                  並び順
-                </label>
-                <select
-                  id="sort"
-                  name="sort"
-                  defaultValue={sort}
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
-                >
-                  {SORT_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-end gap-2">
-                <button
-                  type="submit"
-                  className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-                >
-                  検索
-                </button>
-                <Link
-                  href="/companies"
-                  className="rounded-md bg-slate-200 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-slate-300"
-                >
-                  リセット
-                </Link>
-              </div>
-            </form>
-          </div>
-
+          <p className="my-5 text-sm text-slate-600" role="status">
+            {hasFilters ? "条件に一致する企業" : "登録済み企業"}: <strong className="text-slate-950">{companies.length} 件</strong>
+          </p>
           {companies.length === 0 ? (
-            <div className="mt-6 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
-              <h3 className="text-lg font-semibold text-slate-950">
-                {hasFilters
-                  ? "条件に一致する企業がありません"
-                  : "まだ企業が登録されていません"}
-              </h3>
-              <p className="mt-2 text-sm text-slate-600">
-                {hasFilters
-                  ? "検索条件を変えるか、リセットして一覧を確認してください。"
-                  : "上のフォームから最初の企業を登録してください。"}
-              </p>
+            <div className="ui-empty-state rounded-xl bg-slate-50">
+              <h3 className="text-lg font-semibold">{hasFilters ? "条件に一致する企業がありません" : "最初の企業を登録しましょう"}</h3>
+              <p className="mt-2 text-sm text-slate-600">{hasFilters ? "企業名の一部で検索するか、条件をクリアしてもう一度確認してください。" : "上の「企業を追加」を開くと、企業情報と選考状況を登録できます。"}</p>
+              {hasFilters && <Link href="/companies" className="ui-button ui-secondary mt-5">条件をクリアして全件表示</Link>}
             </div>
           ) : (
-            <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {companies.map((company) => (
-                <article
-                  key={company.id}
-                  className="flex min-h-64 flex-col justify-between rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <Link
-                          href={`/companies/${company.id}`}
-                          className="text-lg font-semibold text-slate-950 hover:text-blue-600 hover:underline"
-                        >
-                          {company.company_name}
-                        </Link>
-                        <p className="mt-1 text-sm text-slate-600">
-                          {company.industry || "業界未設定"}
-                        </p>
-                      </div>
-
-                      <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
-                        {company.selection_status}
-                      </span>
-                    </div>
-
-                    <div>
-                      <p className="text-xs font-medium text-slate-500">
-                        志望度
-                      </p>
-                      <div className="mt-1 flex items-center gap-1">
-                        {[1, 2, 3, 4, 5].map((level) => (
-                          <span
-                            key={level}
-                            className={`h-2 flex-1 rounded-full ${
-                              level <= company.motivation_level
-                                ? "bg-amber-400"
-                                : "bg-slate-200"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    <p className="line-clamp-3 text-sm text-slate-700">
-                      {company.memo || "メモはまだありません。"}
-                    </p>
-                  </div>
-
-                  <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
-                    <span className="text-xs text-slate-500">
-                      更新: {getUpdatedLabel(company.updated_at)}
-                    </span>
-
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href={`/companies/${company.id}`}
-                        className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
-                      >
-                        詳細
-                      </Link>
-                      <Link
-                        href={`/companies/${company.id}/edit`}
-                        className="rounded-md bg-slate-200 px-3 py-1.5 text-sm font-medium text-slate-950 hover:bg-slate-300"
-                      >
-                        編集
-                      </Link>
-                      <form action={deleteCompany}>
-                        <input
-                          type="hidden"
-                          name="company_id"
-                          value={company.id}
-                        />
-                        <button
-                          type="submit"
-                          className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
-                        >
-                          削除
-                        </button>
-                      </form>
-                    </div>
+                <article key={company.id} className="ui-company-card" aria-label={company.company_name}>
+                  <StatusBadge status={company.selection_status} />
+                  <h3 className="mt-3 text-lg font-bold">
+                    <Link href={`/companies/${company.id}`} className="hover:text-blue-600 hover:underline">{company.company_name}</Link>
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-600">{company.industry || "業界未設定"}</p>
+                  <dl className="mt-4 flex items-center justify-between gap-2 text-sm">
+                    <dt className="text-slate-600">志望度</dt>
+                    <dd className="font-semibold">{company.motivation_level} / 5</dd>
+                  </dl>
+                  <p className="mt-3 line-clamp-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{company.memo || "メモはまだありません。"}</p>
+                  <p className="mt-auto pt-4 text-xs text-slate-500">更新: {getUpdatedLabel(company.updated_at)}</p>
+                  <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-200 pt-4">
+                    <Link href={`/companies/${company.id}`} className="ui-button ui-primary flex-1">詳細</Link>
+                    <Link href={`/companies/${company.id}/edit`} className="ui-button ui-secondary flex-1">編集</Link>
+                    <form action={deleteCompany}>
+                      <input type="hidden" name="company_id" value={company.id} />
+                      <button type="submit" className="ui-button ui-danger" aria-label={`${company.company_name}を削除`}>削除</button>
+                    </form>
                   </div>
                 </article>
               ))}

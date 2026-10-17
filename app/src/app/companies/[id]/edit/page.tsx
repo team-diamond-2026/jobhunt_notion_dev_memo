@@ -1,3 +1,4 @@
+import { PageHeading } from "@/components/page-heading";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "../../../../lib/supabase/server";
@@ -60,50 +61,26 @@ export default async function CompanyEditPage({ params }: PageProps) {
   );
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <nav className="bg-white border-b">
-        <div className="max-w-4xl mx-auto h-16 px-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-black">企業編集</h1>
+    <div className="ui-workspace">
+      <div className="ui-toolbar ui-toolbar-narrow"><Link href={`/companies/${company.id}`} className="ui-link">← 企業詳細へ戻る</Link></div>
 
-          <div className="flex items-center gap-4">
-            <Link
-              href={`/companies/${company.id}`}
-              className="text-blue-600 hover:underline"
-            >
-              企業詳細へ戻る
-            </Link>
-
-            <Link href="/companies" className="text-blue-600 hover:underline">
-              企業一覧へ戻る
-            </Link>
-
-            <form action="/logout" method="post">
-              <button
-                type="submit"
-                className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700"
-              >
-                ログアウト
-              </button>
-            </form>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <section className="bg-white rounded-xl shadow p-6">
+      <main id="main-content" className="ui-main ui-main-narrow space-y-6">
+        <PageHeading title="企業編集" description="企業情報と選考状況を見直して、最新の情報を保存しましょう。" />
+        <section className="ui-panel">
           <h2 className="text-2xl font-bold text-black mb-6">企業情報を編集</h2>
 
           <form action={updateCompany} className="grid gap-4">
             <input type="hidden" name="company_id" value={company.id} />
 
             <div>
-              <label className="block text-black mb-1">企業名 *</label>
+              <label htmlFor="company_name" className="ui-label">企業名 *</label>
               <input
+                id="company_name"
                 name="company_name"
                 type="text"
                 required
                 defaultValue={company.company_name}
-                className="w-full border text-black px-3 py-2"
+                className="ui-field"
               />
             </div>
 
@@ -113,11 +90,12 @@ export default async function CompanyEditPage({ params }: PageProps) {
             />
 
             <div>
-              <label className="block text-black mb-1">志望度</label>
+              <label htmlFor="motivation_level" className="ui-label">志望度</label>
               <select
+                id="motivation_level"
                 name="motivation_level"
                 defaultValue={String(company.motivation_level)}
-                className="w-full border text-black px-3 py-2"
+                className="ui-field"
               >
                 <option value="0">0</option>
                 <option value="1">1</option>
@@ -129,11 +107,12 @@ export default async function CompanyEditPage({ params }: PageProps) {
             </div>
 
             <div>
-              <label className="block text-black mb-1">選考ステータス</label>
+              <label htmlFor="selection_status" className="ui-label">選考ステータス</label>
               <select
+                id="selection_status"
                 name="selection_status"
                 defaultValue={company.selection_status}
-                className="w-full border text-black px-3 py-2"
+                className="ui-field"
               >
                 {SELECTION_STATUS_OPTIONS.map((status, index) => (
                   <option
@@ -148,27 +127,27 @@ export default async function CompanyEditPage({ params }: PageProps) {
             </div>
 
             <div>
-              <label className="block text-black mb-1">メモ</label>
+              <label htmlFor="memo" className="ui-label">メモ</label>
               <textarea
+                id="memo"
                 name="memo"
                 rows={5}
                 defaultValue={company.memo ?? ""}
-                className="w-full border text-black px-3 py-2"
+                className="ui-field"
               />
             </div>
 
             <div className="flex items-center gap-3 pt-2">
               <button
                 type="submit"
-                disabled
-                className="px-5 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+                className="ui-button ui-primary"
               >
                 更新する
               </button>
 
               <Link
                 href={`/companies/${company.id}`}
-                className="px-5 py-2 rounded-md bg-slate-200 text-black hover:bg-slate-300"
+                className="ui-button ui-secondary"
               >
                 キャンセル
               </Link>

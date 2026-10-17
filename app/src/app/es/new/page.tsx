@@ -1,3 +1,4 @@
+import { PageHeading } from "@/components/page-heading";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { EsForm } from "@/components/es/es-form";
@@ -32,26 +33,19 @@ export default async function NewEsPage({ searchParams }: PageProps) {
   const companies = data ?? [];
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <nav className="border-b bg-white">
-        <div className="mx-auto flex min-h-16 max-w-4xl items-center justify-between gap-3 px-4 py-3">
-          <div>
-            <p className="text-xs font-medium text-blue-600">ES管理</p>
-            <h1 className="text-xl font-bold text-slate-950 sm:text-2xl">新しいES</h1>
-          </div>
-          <Link href="/es" className="text-sm font-medium text-blue-600 hover:underline">ES一覧へ戻る</Link>
-        </div>
-      </nav>
+    <div className="ui-workspace">
+      <div className="ui-toolbar ui-toolbar-narrow"><Link href="/es" className="ui-link">← ES一覧へ戻る</Link></div>
 
-      <main className="mx-auto max-w-4xl px-3 py-6 sm:px-4 sm:py-8">
+      <main id="main-content" className="ui-main ui-main-narrow space-y-6">
+        <PageHeading title="新しいES" description="企業と文書の種類を選んで、下書きを保存できます。" />
         {companies.length === 0 ? (
-          <section className="rounded-xl bg-white p-8 text-center shadow">
+          <section className="ui-panel text-center">
             <h2 className="text-lg font-bold text-slate-950">先に企業を登録してください</h2>
             <p className="mt-2 text-sm text-slate-600">ESは企業に紐付けて保存します。</p>
-            <Link href="/companies" className="mt-5 inline-flex rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">企業を登録</Link>
+            <Link href="/companies" className="ui-button ui-primary mt-5">企業を登録</Link>
           </section>
         ) : (
-          <section className="rounded-xl bg-white p-5 shadow sm:p-7">
+          <section className="ui-panel">
             <EsForm action={createEsDocument} companies={companies} defaultCompanyId={params.company} error={params.error} submitLabel="下書きを保存" />
           </section>
         )}

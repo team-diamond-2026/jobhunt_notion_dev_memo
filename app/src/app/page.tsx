@@ -1,3 +1,5 @@
+import { StatusBadge } from "@/components/status-badge";
+import { PageHeading } from "@/components/page-heading";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "../lib/supabase/server";
@@ -51,35 +53,11 @@ export default async function Home() {
   const recentCompanies = companies.slice(0, 5);
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <nav className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-black">Job Hunt Dashboard</h1>
-
-          <div className="flex items-center gap-4">
-            <span className="text-slate-700">
-              {user.user_metadata?.display_name || user.email}
-            </span>
-
-            <Link href="/settings" className="text-sm text-blue-600 hover:underline">
-              設定
-            </Link>
-
-            <form action="/logout" method="post">
-              <button
-                type="submit"
-                className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700"
-              >
-                ログアウト
-              </button>
-            </form>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-        <section className="bg-white rounded-xl shadow p-8">
-          <h2 className="text-3xl font-bold text-black mb-3">
+    <div className="ui-workspace">
+      <main id="main-content" className="ui-main space-y-6">
+        <PageHeading title="ダッシュボード" description="企業情報と選考の進み具合を、ひとつの場所で確認できます。" />
+        <section className="ui-panel">
+          <h2 className="text-xl sm:text-2xl font-bold text-black mb-3">
             ようこそ、{user.user_metadata?.display_name || user.email}さん
           </h2>
           <p className="text-slate-600">
@@ -89,28 +67,28 @@ export default async function Home() {
           <div className="flex flex-wrap gap-3 mt-6">
             <Link
               href="/companies"
-              className="px-5 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700"
+              className="ui-button ui-primary"
             >
               企業一覧を見る
             </Link>
 
             <Link
               href="/companies/board"
-              className="px-5 py-2 rounded-md bg-slate-800 text-white hover:bg-slate-900"
+              className="ui-button ui-primary"
             >
               選考管理ボードを見る
             </Link>
 
             <Link
               href="/es"
-              className="px-5 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
+              className="ui-button ui-primary"
             >
               ESを管理
             </Link>
 
             <Link
               href={`/companies?status=${SELECTION_STATUS_OPTIONS[0]}`}
-              className="px-5 py-2 rounded-md bg-slate-200 text-black hover:bg-slate-300"
+              className="ui-button ui-secondary"
             >
               未応募を確認
             </Link>
@@ -118,32 +96,32 @@ export default async function Home() {
         </section>
 
         <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-          <div className="bg-white rounded-xl shadow p-6">
+          <div className="ui-panel">
             <p className="text-sm text-slate-500 mb-2">登録企業数</p>
             <p className="text-3xl font-bold text-black">{totalCompanies}</p>
           </div>
 
-          <div className="bg-white rounded-xl shadow p-6">
+          <div className="ui-panel">
             <p className="text-sm text-slate-500 mb-2">未応募</p>
             <p className="text-3xl font-bold text-black">{notEnteredCount}</p>
           </div>
 
-          <div className="bg-white rounded-xl shadow p-6">
+          <div className="ui-panel">
             <p className="text-sm text-slate-500 mb-2">面接中</p>
             <p className="text-3xl font-bold text-black">{interviewCount}</p>
           </div>
 
-          <div className="bg-white rounded-xl shadow p-6">
+          <div className="ui-panel">
             <p className="text-sm text-slate-500 mb-2">内定</p>
             <p className="text-3xl font-bold text-black">{offerCount}</p>
           </div>
         </section>
 
         <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <div className="bg-white rounded-xl shadow p-6">
-            <div className="flex items-center justify-between mb-4">
+          <div className="ui-panel">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
               <h3 className="text-2xl font-bold text-black">最近更新した企業</h3>
-              <Link href="/companies" className="text-blue-600 hover:underline">
+              <Link href="/companies" className="ui-link">
                 一覧を見る
               </Link>
             </div>
@@ -155,7 +133,7 @@ export default async function Home() {
                 {recentCompanies.map((company) => (
                   <div
                     key={company.id}
-                    className="border rounded-lg p-4 flex items-center justify-between gap-4"
+                    className="border rounded-lg p-4 flex flex-col items-start justify-between gap-3 sm:flex-row"
                   >
                     <div className="min-w-0">
                       <Link
@@ -170,16 +148,14 @@ export default async function Home() {
                       </p>
                     </div>
 
-                    <span className="shrink-0 px-3 py-1 rounded-full bg-slate-100 text-black text-sm">
-                      {company.selection_status}
-                    </span>
+                    <StatusBadge status={company.selection_status} />
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          <div className="bg-white rounded-xl shadow p-6">
+          <div className="ui-panel">
             <h3 className="text-2xl font-bold text-black mb-4">アカウント情報</h3>
 
             <dl className="space-y-4">
@@ -205,13 +181,13 @@ export default async function Home() {
 
             <div className="mt-6 border-t pt-6">
               <h4 className="text-lg font-semibold text-black mb-3">
-                次のおすすめ実装
+                次の準備を進めましょう
               </h4>
               <ul className="space-y-2 text-slate-700">
-                <li>・面接ログ機能の追加</li>
-                <li>・ESテンプレートの追加</li>
-                <li>・締切タスク管理の追加</li>
-                <li>・カレンダー表示の追加</li>
+                <li>・気になる企業を登録して比較する</li>
+                <li>・企業ごとのESを下書きする</li>
+                <li>・選考ボードで進み具合を確認する</li>
+                <li>・面接の前に企業研究メモを見返す</li>
               </ul>
             </div>
           </div>
