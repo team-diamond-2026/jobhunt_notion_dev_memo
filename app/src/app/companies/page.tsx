@@ -210,6 +210,56 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
               </select>
             </div>
 
+            <div>
+              <label
+                htmlFor="deadline_title"
+                className="block text-sm font-medium text-slate-700"
+              >
+                締切タスク名
+              </label>
+              <input
+                id="deadline_title"
+                name="deadline_title"
+                type="text"
+                placeholder="例: ESを提出する"
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="deadline_date"
+                className="block text-sm font-medium text-slate-700"
+              >
+                締切日
+              </label>
+              <input
+                id="deadline_date"
+                name="deadline_date"
+                type="date"
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="deadline_priority"
+                className="block text-sm font-medium text-slate-700"
+              >
+                締切の優先度
+              </label>
+              <select
+                id="deadline_priority"
+                name="deadline_priority"
+                defaultValue="3"
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+              >
+                <option value="1">低</option>
+                <option value="3">中</option>
+                <option value="5">高</option>
+              </select>
+            </div>
+
             <div className="lg:col-span-4">
               <label
                 htmlFor="memo"
@@ -229,8 +279,7 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
             <div className="flex items-end">
               <button
                 type="submit"
-                disabled
-                className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+                className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
               >
                 企業を登録
               </button>

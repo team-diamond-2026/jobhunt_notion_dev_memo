@@ -22,6 +22,12 @@ type Company = {
   updated_at: string;
 };
 
+type DeadlineTask = {
+  title: string;
+  due_date: string;
+  priority: number;
+};
+
 type PageProps = {
   params: Promise<{
     id: string;
@@ -53,6 +59,18 @@ export default async function CompanyEditPage({ params }: PageProps) {
   }
 
   const company = data as Company;
+  const { data: deadlineTask, error: deadlineTaskError } = await supabase
+    .from("tasks")
+    .select("title, due_date, priority")
+    .eq("related_company_id", company.id)
+    .order("due_date", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (deadlineTaskError) {
+    throw new Error(`締切タスクの取得に失敗しました: ${deadlineTaskError.message}`);
+  }
+
   const progressIndex = getSelectionStatusIndex(company.selection_status);
   const industryFormValues = getIndustryFormValues(
     company.industry_category,
@@ -148,6 +166,51 @@ export default async function CompanyEditPage({ params }: PageProps) {
             </div>
 
             <div>
+              <label className="block text-black mb-1" htmlFor="deadline_title">
+                締切タスク名
+              </label>
+              <input
+                id="deadline_title"
+                name="deadline_title"
+                type="text"
+                defaultValue={(deadlineTask as DeadlineTask | null)?.title ?? ""}
+                placeholder="例: ESを提出する"
+                className="w-full border text-black px-3 py-2"
+              />
+            </div>
+
+            <div>
+              <label className="block text-black mb-1" htmlFor="deadline_date">
+                締切日
+              </label>
+              <input
+                id="deadline_date"
+                name="deadline_date"
+                type="date"
+                defaultValue={
+                  (deadlineTask as DeadlineTask | null)?.due_date?.slice(0, 10) ?? ""
+                }
+                className="w-full border text-black px-3 py-2"
+              />
+            </div>
+
+            <div>
+              <label className="block text-black mb-1" htmlFor="deadline_priority">
+                締切の優先度
+              </label>
+              <select
+                id="deadline_priority"
+                name="deadline_priority"
+                defaultValue={String((deadlineTask as DeadlineTask | null)?.priority ?? 3)}
+                className="w-full border text-black px-3 py-2"
+              >
+                <option value="1">低</option>
+                <option value="3">中</option>
+                <option value="5">高</option>
+              </select>
+            </div>
+
+            <div>
               <label className="block text-black mb-1">メモ</label>
               <textarea
                 name="memo"
@@ -160,8 +223,7 @@ export default async function CompanyEditPage({ params }: PageProps) {
             <div className="flex items-center gap-3 pt-2">
               <button
                 type="submit"
-                disabled
-                className="px-5 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+                className="px-5 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700"
               >
                 更新する
               </button>

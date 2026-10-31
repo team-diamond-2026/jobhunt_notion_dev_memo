@@ -48,6 +48,30 @@ function getIndustryValues(formData: FormData) {
   return { category, industry: category };
 }
 
+function getDeadlineValues(formData: FormData) {
+  const title = String(formData.get("deadline_title") || "").trim();
+  const date = String(formData.get("deadline_date") || "").trim();
+  const priority = Number(formData.get("deadline_priority") || 0);
+
+  if (!title && !date) {
+    return null;
+  }
+
+  if (!title || !date) {
+    throw new Error("締切タスク名と締切日はセットで入力してください");
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    throw new Error("締切日の形式が正しくありません");
+  }
+
+  return {
+    title,
+    due_date: `${date}T23:59:59+09:00`,
+    priority: Math.min(Math.max(priority, 0), 5),
+  };
+}
+
 export async function createCompany(formData: FormData) {
   const supabase = await createClient();
 
@@ -66,6 +90,7 @@ export async function createCompany(formData: FormData) {
     formData.get("selection_status") || SELECTION_STATUS_OPTIONS[0],
   ).trim();
   const memo = String(formData.get("memo") || "").trim();
+  const deadline = getDeadlineValues(formData);
 
   if (!company_name) {
     throw new Error("企業名は必須です");
@@ -77,18 +102,54 @@ export async function createCompany(formData: FormData) {
 
   const safeMotivationLevel = Math.min(Math.max(motivation_level, 0), 5);
 
-  const { error } = await supabase.from("companies").insert({
+  const { data: workspaceCompany, error: workspaceLookupError } = await supabase
+    .from("companies")
+    .select("workspace_id")
+    .eq("user_id", user.id)
+    .not("workspace_id", "is", null)
+    .limit(1)
+    .maybeSingle();
+
+  if (workspaceLookupError) {
+    throw new Error(`Workspaceの取得に失敗しました: ${workspaceLookupError.message}`);
+  }
+
+  const { data: createdCompany, error } = await supabase
+    .from("companies")
+    .insert({
     user_id: user.id,
+    workspace_id: workspaceCompany?.workspace_id ?? null,
     company_name,
     industry_category,
     industry: industry || null,
     motivation_level: safeMotivationLevel,
     selection_status,
     memo: memo || null,
-  });
+    })
+    .select("id, workspace_id")
+    .single();
 
   if (error) {
     throw new Error(`企業登録に失敗しました: ${error.message}`);
+  }
+
+  if (deadline) {
+    if (!createdCompany?.workspace_id) {
+      throw new Error("Workspaceが設定されていないため、締切を登録できません");
+    }
+
+    const { error: taskError } = await supabase.from("tasks").insert({
+      workspace_id: createdCompany.workspace_id,
+      title: deadline.title,
+      due_date: deadline.due_date,
+      priority: deadline.priority,
+      status: "pending",
+      related_company_id: createdCompany.id,
+    });
+
+    if (taskError) {
+      throw new Error(`締切タスクの登録に失敗しました: ${taskError.message}`);
+    }
   }
 
   revalidatePath("/companies");
@@ -143,6 +204,7 @@ export async function updateCompany(formData: FormData) {
     formData.get("selection_status") || SELECTION_STATUS_OPTIONS[0],
   ).trim();
   const memo = String(formData.get("memo") || "").trim();
+  const deadline = getDeadlineValues(formData);
 
   if (!companyId) {
     throw new Error("更新対象の企業IDがありません");
@@ -158,7 +220,7 @@ export async function updateCompany(formData: FormData) {
 
   const { data: currentCompany, error: currentCompanyError } = await supabase
     .from("companies")
-    .select("selection_status")
+    .select("selection_status, workspace_id")
     .eq("id", companyId)
     .eq("user_id", user.id)
     .single();
@@ -189,6 +251,39 @@ export async function updateCompany(formData: FormData) {
 
   if (error) {
     throw new Error(`企業更新に失敗しました: ${error.message}`);
+  }
+
+  if (deadline) {
+    const { data: existingTask, error: taskLookupError } = await supabase
+      .from("tasks")
+      .select("id")
+      .eq("related_company_id", companyId)
+      .order("due_date", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (taskLookupError) {
+      throw new Error(`既存の締切タスク取得に失敗しました: ${taskLookupError.message}`);
+    }
+
+    const taskData = {
+      title: deadline.title,
+      due_date: deadline.due_date,
+      priority: deadline.priority,
+      status: "pending",
+      related_company_id: companyId,
+    };
+
+    const taskResult = existingTask
+      ? await supabase.from("tasks").update(taskData).eq("id", existingTask.id)
+      : await supabase.from("tasks").insert({
+          ...taskData,
+          workspace_id: currentCompany.workspace_id,
+        });
+
+    if (taskResult.error) {
+      throw new Error(`締切タスクの保存に失敗しました: ${taskResult.error.message}`);
+    }
   }
 
   revalidatePath("/companies");

@@ -48,6 +48,14 @@ function getFriendlyError(error: unknown) {
     return "このメールアドレスはすでに登録されています。";
   }
 
+  if (
+    message === "Failed to fetch" ||
+    message.includes("NetworkError") ||
+    message.includes("fetch failed")
+  ) {
+    return "認証サービスに接続できません。Supabase の URL が有効か、ネットワーク接続を確認してください。設定を変更した場合は、開発サーバーを再起動してください。";
+  }
+
   return message;
 }
 

@@ -21,6 +21,14 @@ function getFriendlyError(error: unknown) {
     return "再設定リンクが期限切れ、または無効です。もう一度メールを送信してください。";
   }
 
+  if (
+    error.message === "Failed to fetch" ||
+    error.message.includes("NetworkError") ||
+    error.message.includes("fetch failed")
+  ) {
+    return "認証サービスに接続できません。Supabase の URL が有効か、ネットワーク接続を確認してください。設定を変更した場合は、開発サーバーを再起動してください。";
+  }
+
   return error.message;
 }
 

@@ -6,6 +6,7 @@ import { SELECTION_STATUS_OPTIONS } from "../lib/selection-status";
 type Company = {
   id: string;
   user_id: string;
+  workspace_id: string | number | null;
   company_name: string;
   industry: string | null;
   motivation_level: number;
@@ -20,6 +21,77 @@ type Kpi = {
   value: number;
   description: string;
 };
+
+type ScheduleEvent = {
+  id: string;
+  title: string;
+  event_type: string | null;
+  start_at: string;
+  end_at: string | null;
+  related_company_id: string | null;
+};
+
+type DeadlineTask = {
+  id: string;
+  title: string;
+  due_date: string;
+  status: string;
+  priority: number | string;
+  related_company_id: string | null;
+};
+
+type CompanyName = {
+  id: string;
+  company_name: string;
+};
+
+const DASHBOARD_TIME_ZONE = "Asia/Tokyo";
+
+function getDateKey(date: Date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: DASHBOARD_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+function getDateRangeStart(dateKey: string) {
+  return new Date(`${dateKey}T00:00:00+09:00`);
+}
+
+function addDays(dateKey: string, days: number) {
+  const date = getDateRangeStart(dateKey);
+  date.setUTCDate(date.getUTCDate() + days);
+  return getDateKey(date);
+}
+
+function getWeekStartKey(dateKey: string) {
+  const date = getDateRangeStart(dateKey);
+  const day = date.getUTCDay();
+  date.setUTCDate(date.getUTCDate() - ((day + 6) % 7));
+  return getDateKey(date);
+}
+
+function formatScheduleDate(value: string) {
+  return new Intl.DateTimeFormat("ja-JP", {
+    timeZone: DASHBOARD_TIME_ZONE,
+    month: "numeric",
+    day: "numeric",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function formatDeadlineDate(value: string) {
+  return new Intl.DateTimeFormat("ja-JP", {
+    timeZone: DASHBOARD_TIME_ZONE,
+    month: "numeric",
+    day: "numeric",
+    weekday: "short",
+  }).format(new Date(value));
+}
 
 export default async function Home() {
   const supabase = await createClient();
@@ -42,6 +114,88 @@ export default async function Home() {
   }
 
   const companies = (data ?? []) as Company[];
+
+  const todayKey = getDateKey(new Date());
+  const weekStartKey = getWeekStartKey(todayKey);
+  const weekEndKey = addDays(weekStartKey, 7);
+  const workspaceIds = [
+    ...new Set(
+      companies
+        .map((company) => company.workspace_id)
+        .filter((id): id is string | number => id !== null && id !== undefined),
+    ),
+  ];
+
+  let scheduleEvents: ScheduleEvent[] = [];
+  let deadlineTasks: DeadlineTask[] = [];
+
+  if (workspaceIds.length > 0) {
+    const [eventsResult, tasksResult] = await Promise.all([
+      supabase
+        .from("events")
+        .select("id, title, event_type, start_at, end_at, related_company_id")
+        .in("workspace_id", workspaceIds)
+        .gte("start_at", getDateRangeStart(todayKey).toISOString())
+        .lt("start_at", getDateRangeStart(addDays(todayKey, 1)).toISOString())
+        .order("start_at", { ascending: true })
+        .limit(5),
+      supabase
+        .from("tasks")
+        .select("id, title, due_date, status, priority, related_company_id")
+        .in("workspace_id", workspaceIds)
+        .gte("due_date", getDateRangeStart(weekStartKey).toISOString())
+        .lt("due_date", getDateRangeStart(weekEndKey).toISOString())
+        .not("due_date", "is", null)
+        .order("due_date", { ascending: true })
+        .limit(10),
+    ]);
+
+    if (eventsResult.error) {
+      throw new Error(`今日の予定の取得に失敗しました: ${eventsResult.error.message}`);
+    }
+
+    if (tasksResult.error) {
+      throw new Error(`今週の締切の取得に失敗しました: ${tasksResult.error.message}`);
+    }
+
+    scheduleEvents = (eventsResult.data ?? []) as ScheduleEvent[];
+    deadlineTasks = (tasksResult.data ?? [])
+      .filter((task) => !["done", "completed", "archived"].includes(task.status))
+      .map((task) => task as DeadlineTask);
+  }
+
+  const todayDeadlineTasks = deadlineTasks.filter(
+    (task) => getDateKey(new Date(task.due_date)) === todayKey,
+  );
+  const weeklyDeadlineTasks = deadlineTasks.filter(
+    (task) => getDateKey(new Date(task.due_date)) !== todayKey,
+  );
+
+  const relatedCompanyIds = [
+    ...new Set(
+      [...scheduleEvents, ...deadlineTasks]
+        .map((item) => item.related_company_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  let relatedCompanies: CompanyName[] = [];
+
+  if (relatedCompanyIds.length > 0) {
+    const { data: relatedCompanyData, error: relatedCompanyError } = await supabase
+      .from("companies")
+      .select("id, company_name")
+      .in("id", relatedCompanyIds);
+
+    if (relatedCompanyError) {
+      throw new Error(`関連企業の取得に失敗しました: ${relatedCompanyError.message}`);
+    }
+
+    relatedCompanies = (relatedCompanyData ?? []) as CompanyName[];
+  }
+
+  const companyNameById = new Map(
+    relatedCompanies.map((company) => [company.id, company.company_name]),
+  );
 
   const totalCompanies = companies.length;
   const notEnteredCount = companies.filter(
@@ -244,6 +398,89 @@ export default async function Home() {
               </ul>
             </div>
           </div>
+        </section>
+        <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <section
+            className="bg-white rounded-xl shadow p-6"
+            aria-labelledby="today-schedule-heading"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 id="today-schedule-heading" className="text-2xl font-bold text-black">
+                今日の予定
+              </h3>
+              <span className="text-sm text-slate-500">
+                {scheduleEvents.length + todayDeadlineTasks.length}件
+              </span>
+            </div>
+            {scheduleEvents.length === 0 && todayDeadlineTasks.length === 0 ? (
+              <p className="text-slate-500">今日の予定はありません。</p>
+            ) : (
+              <div className="space-y-3">
+                {scheduleEvents.map((event) => (
+                  <div key={event.id} className="border rounded-lg p-4">
+                    <p className="font-semibold text-black">{event.title}</p>
+                    <p className="text-sm text-slate-600 mt-1">
+                      {formatScheduleDate(event.start_at)}
+                      {event.event_type ? ` · ${event.event_type}` : ""}
+                    </p>
+                    {event.related_company_id && companyNameById.get(event.related_company_id) ? (
+                      <p className="text-sm text-slate-600 mt-1">
+                        {companyNameById.get(event.related_company_id)}
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+                {todayDeadlineTasks.map((task) => (
+                  <div key={task.id} className="border rounded-lg p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="font-semibold text-black">{task.title}</p>
+                      <span className="shrink-0 text-sm text-slate-600">
+                        {formatDeadlineDate(task.due_date)}
+                      </span>
+                    </div>
+                    {task.related_company_id && companyNameById.get(task.related_company_id) ? (
+                      <p className="text-sm text-slate-600 mt-1">
+                        {companyNameById.get(task.related_company_id)}
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section
+            className="bg-white rounded-xl shadow p-6"
+            aria-labelledby="weekly-deadlines-heading"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 id="weekly-deadlines-heading" className="text-2xl font-bold text-black">
+                今週の締切
+              </h3>
+              <span className="text-sm text-slate-500">{weeklyDeadlineTasks.length}件</span>
+            </div>
+            {weeklyDeadlineTasks.length === 0 ? (
+              <p className="text-slate-500">今週の締切はありません。</p>
+            ) : (
+              <div className="space-y-3">
+                {weeklyDeadlineTasks.map((task) => (
+                  <div key={task.id} className="border rounded-lg p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="font-semibold text-black">{task.title}</p>
+                      <span className="shrink-0 text-sm text-slate-600">
+                        {formatDeadlineDate(task.due_date)}
+                      </span>
+                    </div>
+                    {task.related_company_id && companyNameById.get(task.related_company_id) ? (
+                      <p className="text-sm text-slate-600 mt-1">
+                        {companyNameById.get(task.related_company_id)}
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
         </section>
       </main>
     </div>

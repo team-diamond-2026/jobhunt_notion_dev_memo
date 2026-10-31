@@ -20,6 +20,12 @@ type Company = {
   updated_at: string;
 };
 
+type DeadlineTask = {
+  title: string;
+  due_date: string;
+  priority: number;
+};
+
 type PageProps = {
   params: Promise<{
     id: string;
@@ -62,6 +68,18 @@ export default async function CompanyDetailPage({ params }: PageProps) {
   }
 
   const company = data as Company;
+  const { data: deadlineTask, error: deadlineTaskError } = await supabase
+    .from("tasks")
+    .select("title, due_date, priority")
+    .eq("related_company_id", company.id)
+    .order("due_date", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (deadlineTaskError) {
+    throw new Error(`締切タスクの取得に失敗しました: ${deadlineTaskError.message}`);
+  }
+
   const progressIndex = getProgressIndex(company.selection_status);
   const motivationLevel = Math.min(Math.max(company.motivation_level, 0), 5);
 
@@ -275,6 +293,60 @@ export default async function CompanyDetailPage({ params }: PageProps) {
                         {status}
                       </option>
                     ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="deadline_title"
+                    className="block text-sm font-medium text-slate-700"
+                  >
+                    締切タスク名
+                  </label>
+                  <input
+                    id="deadline_title"
+                    name="deadline_title"
+                    type="text"
+                    defaultValue={(deadlineTask as DeadlineTask | null)?.title ?? ""}
+                    placeholder="例: ESを提出する"
+                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="deadline_date"
+                    className="block text-sm font-medium text-slate-700"
+                  >
+                    締切日
+                  </label>
+                  <input
+                    id="deadline_date"
+                    name="deadline_date"
+                    type="date"
+                    defaultValue={
+                      (deadlineTask as DeadlineTask | null)?.due_date?.slice(0, 10) ?? ""
+                    }
+                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="deadline_priority"
+                    className="block text-sm font-medium text-slate-700"
+                  >
+                    締切の優先度
+                  </label>
+                  <select
+                    id="deadline_priority"
+                    name="deadline_priority"
+                    defaultValue={String((deadlineTask as DeadlineTask | null)?.priority ?? 3)}
+                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+                  >
+                    <option value="1">低</option>
+                    <option value="3">中</option>
+                    <option value="5">高</option>
                   </select>
                 </div>
 
