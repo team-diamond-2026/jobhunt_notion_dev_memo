@@ -6,6 +6,7 @@ import {
   getSelectionStatusIndex,
   SELECTION_STATUS_OPTIONS,
 } from "../../../lib/selection-status";
+import { normalizeTaskPriority } from "../../../lib/task";
 
 type Company = {
   id: string;
@@ -23,7 +24,7 @@ type Company = {
 type DeadlineTask = {
   title: string;
   due_date: string;
-  priority: number;
+  priority: string;
 };
 
 type PageProps = {
@@ -341,12 +342,14 @@ export default async function CompanyDetailPage({ params }: PageProps) {
                   <select
                     id="deadline_priority"
                     name="deadline_priority"
-                    defaultValue={String((deadlineTask as DeadlineTask | null)?.priority ?? 3)}
+                    defaultValue={normalizeTaskPriority(
+                      String((deadlineTask as DeadlineTask | null)?.priority ?? "medium"),
+                    )}
                     className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
                   >
-                    <option value="1">低</option>
-                    <option value="3">中</option>
-                    <option value="5">高</option>
+                    <option value="low">低</option>
+                    <option value="medium">中</option>
+                    <option value="high">高</option>
                   </select>
                 </div>
 

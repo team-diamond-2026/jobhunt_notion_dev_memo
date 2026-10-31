@@ -67,9 +67,9 @@ function addDays(dateKey: string, days: number) {
 }
 
 function getWeekStartKey(dateKey: string) {
-  const date = getDateRangeStart(dateKey);
+  const date = new Date(`${dateKey}T12:00:00Z`);
   const day = date.getUTCDay();
-  date.setUTCDate(date.getUTCDate() - ((day + 6) % 7));
+  date.setUTCDate(date.getUTCDate() - day);
   return getDateKey(date);
 }
 
@@ -118,19 +118,25 @@ export default async function Home() {
   const todayKey = getDateKey(new Date());
   const weekStartKey = getWeekStartKey(todayKey);
   const weekEndKey = addDays(weekStartKey, 7);
-  const workspaceIds = [
-    ...new Set(
-      companies
-        .map((company) => company.workspace_id)
-        .filter((id): id is string | number => id !== null && id !== undefined),
-    ),
-  ];
+  const { data: workspaces, error: workspacesError } = await supabase
+    .from("workspaces")
+    .select("id")
+    .eq("user_id", user.id);
+
+  if (workspacesError) {
+    throw new Error(`Workspaceの取得に失敗しました: ${workspacesError.message}`);
+  }
+
+  const workspaceIds = (workspaces ?? []).map((workspace) => workspace.id);
 
   let scheduleEvents: ScheduleEvent[] = [];
   let deadlineTasks: DeadlineTask[] = [];
 
   if (workspaceIds.length > 0) {
-    const [eventsResult, tasksResult] = await Promise.all([
+    const todayStart = getDateRangeStart(todayKey);
+    const tomorrowStart = getDateRangeStart(addDays(todayKey, 1));
+    const weekEnd = getDateRangeStart(weekEndKey);
+    const [eventsResult, todayTasksResult, weeklyTasksResult] = await Promise.all([
       supabase
         .from("events")
         .select("id, title, event_type, start_at, end_at, related_company_id")
@@ -143,8 +149,19 @@ export default async function Home() {
         .from("tasks")
         .select("id, title, due_date, status, priority, related_company_id")
         .in("workspace_id", workspaceIds)
-        .gte("due_date", getDateRangeStart(weekStartKey).toISOString())
-        .lt("due_date", getDateRangeStart(weekEndKey).toISOString())
+        .in("status", ["todo", "doing"])
+        .gte("due_date", todayStart.toISOString())
+        .lt("due_date", tomorrowStart.toISOString())
+        .not("due_date", "is", null)
+        .order("due_date", { ascending: true })
+        .limit(10),
+      supabase
+        .from("tasks")
+        .select("id, title, due_date, status, priority, related_company_id")
+        .in("workspace_id", workspaceIds)
+        .in("status", ["todo", "doing"])
+        .gte("due_date", tomorrowStart.toISOString())
+        .lt("due_date", weekEnd.toISOString())
         .not("due_date", "is", null)
         .order("due_date", { ascending: true })
         .limit(10),
@@ -154,14 +171,19 @@ export default async function Home() {
       throw new Error(`今日の予定の取得に失敗しました: ${eventsResult.error.message}`);
     }
 
-    if (tasksResult.error) {
-      throw new Error(`今週の締切の取得に失敗しました: ${tasksResult.error.message}`);
+    if (todayTasksResult.error) {
+      throw new Error(`今日の締切の取得に失敗しました: ${todayTasksResult.error.message}`);
+    }
+
+    if (weeklyTasksResult.error) {
+      throw new Error(`今週の締切の取得に失敗しました: ${weeklyTasksResult.error.message}`);
     }
 
     scheduleEvents = (eventsResult.data ?? []) as ScheduleEvent[];
-    deadlineTasks = (tasksResult.data ?? [])
-      .filter((task) => !["done", "completed", "archived"].includes(task.status))
-      .map((task) => task as DeadlineTask);
+    deadlineTasks = [
+      ...(todayTasksResult.data ?? []),
+      ...(weeklyTasksResult.data ?? []),
+    ].map((task) => task as DeadlineTask);
   }
 
   const todayDeadlineTasks = deadlineTasks.filter(

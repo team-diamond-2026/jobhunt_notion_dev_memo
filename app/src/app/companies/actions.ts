@@ -12,6 +12,7 @@ import {
   isSelectionStatus,
   SELECTION_STATUS_OPTIONS,
 } from "../../lib/selection-status";
+import { normalizeTaskPriority } from "../../lib/task";
 
 function getIndustryValues(formData: FormData) {
   const category = String(formData.get("industry_category") || "").trim();
@@ -51,7 +52,9 @@ function getIndustryValues(formData: FormData) {
 function getDeadlineValues(formData: FormData) {
   const title = String(formData.get("deadline_title") || "").trim();
   const date = String(formData.get("deadline_date") || "").trim();
-  const priority = Number(formData.get("deadline_priority") || 0);
+  const priority = normalizeTaskPriority(
+    String(formData.get("deadline_priority") || "medium").trim(),
+  );
 
   if (!title && !date) {
     return null;
@@ -68,7 +71,7 @@ function getDeadlineValues(formData: FormData) {
   return {
     title,
     due_date: `${date}T23:59:59+09:00`,
-    priority: Math.min(Math.max(priority, 0), 5),
+    priority,
   };
 }
 
@@ -102,11 +105,11 @@ export async function createCompany(formData: FormData) {
 
   const safeMotivationLevel = Math.min(Math.max(motivation_level, 0), 5);
 
-  const { data: workspaceCompany, error: workspaceLookupError } = await supabase
-    .from("companies")
-    .select("workspace_id")
+  const { data: workspace, error: workspaceLookupError } = await supabase
+    .from("workspaces")
+    .select("id")
     .eq("user_id", user.id)
-    .not("workspace_id", "is", null)
+    .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
 
@@ -114,11 +117,15 @@ export async function createCompany(formData: FormData) {
     throw new Error(`Workspaceの取得に失敗しました: ${workspaceLookupError.message}`);
   }
 
+  if (!workspace?.id) {
+    throw new Error("Workspaceが見つからないため、企業を登録できません");
+  }
+
   const { data: createdCompany, error } = await supabase
     .from("companies")
     .insert({
     user_id: user.id,
-    workspace_id: workspaceCompany?.workspace_id ?? null,
+    workspace_id: workspace?.id ?? null,
     company_name,
     industry_category,
     industry: industry || null,
@@ -143,11 +150,23 @@ export async function createCompany(formData: FormData) {
       title: deadline.title,
       due_date: deadline.due_date,
       priority: deadline.priority,
-      status: "pending",
+      status: "todo",
       related_company_id: createdCompany.id,
     });
 
     if (taskError) {
+      const { error: rollbackError } = await supabase
+        .from("companies")
+        .delete()
+        .eq("id", createdCompany.id)
+        .eq("user_id", user.id);
+
+      if (rollbackError) {
+        throw new Error(
+          `締切タスクの登録に失敗しました。企業の取り消しにも失敗しました: ${taskError.message}`,
+        );
+      }
+
       throw new Error(`締切タスクの登録に失敗しました: ${taskError.message}`);
     }
   }
@@ -220,7 +239,7 @@ export async function updateCompany(formData: FormData) {
 
   const { data: currentCompany, error: currentCompanyError } = await supabase
     .from("companies")
-    .select("selection_status, workspace_id")
+    .select("company_name, industry_category, industry, motivation_level, selection_status, memo, workspace_id")
     .eq("id", companyId)
     .eq("user_id", user.id)
     .single();
@@ -270,7 +289,7 @@ export async function updateCompany(formData: FormData) {
       title: deadline.title,
       due_date: deadline.due_date,
       priority: deadline.priority,
-      status: "pending",
+      status: "todo",
       related_company_id: companyId,
     };
 
@@ -282,6 +301,20 @@ export async function updateCompany(formData: FormData) {
         });
 
     if (taskResult.error) {
+      await supabase
+        .from("companies")
+        .update({
+          company_name: currentCompany.company_name,
+          industry_category: currentCompany.industry_category,
+          industry: currentCompany.industry,
+          motivation_level: currentCompany.motivation_level,
+          selection_status: currentCompany.selection_status,
+          memo: currentCompany.memo,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", companyId)
+        .eq("user_id", user.id);
+
       throw new Error(`締切タスクの保存に失敗しました: ${taskResult.error.message}`);
     }
   }

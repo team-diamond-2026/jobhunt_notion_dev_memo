@@ -251,12 +251,12 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
               <select
                 id="deadline_priority"
                 name="deadline_priority"
-                defaultValue="3"
+                defaultValue="medium"
                 className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
               >
-                <option value="1">低</option>
-                <option value="3">中</option>
-                <option value="5">高</option>
+                <option value="low">低</option>
+                <option value="medium">中</option>
+                <option value="high">高</option>
               </select>
             </div>
 
