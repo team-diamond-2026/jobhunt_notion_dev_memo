@@ -19,7 +19,8 @@ type Company = {
 
 type PageProps = {
   searchParams: Promise<{
-    keyword?: string;
+    keyword?: string | string[];
+    q?: string | string[];
     industry?: string;
     status?: string;
     sort?: string;
@@ -68,7 +69,8 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
   }
 
   const resolvedSearchParams = await searchParams;
-  const keyword = String(resolvedSearchParams.keyword ?? "").trim();
+  const searchKeyword = resolvedSearchParams.keyword ?? resolvedSearchParams.q;
+  const keyword = (Array.isArray(searchKeyword) ? searchKeyword[0] : searchKeyword)?.trim() ?? "";
   const industry = String(resolvedSearchParams.industry ?? "").trim();
   const status = String(resolvedSearchParams.status ?? "all").trim();
   const sort = String(resolvedSearchParams.sort ?? "updated_desc").trim();
@@ -245,11 +247,18 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
                 登録済み企業
               </h2>
               <p className="mt-1 text-sm text-slate-600">
+                {keyword && <>「{keyword}」の</>}
                 検索結果: {companies.length} 件
               </p>
             </div>
 
-            <form method="get" className="grid gap-3 md:grid-cols-5">
+            <form
+              key={JSON.stringify([keyword, industry, status, sort])}
+              action="/companies"
+              method="get"
+              role="search"
+              className="grid gap-3 md:grid-cols-5"
+            >
               <div>
                 <label
                   htmlFor="keyword"
