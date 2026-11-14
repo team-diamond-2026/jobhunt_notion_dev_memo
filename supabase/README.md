@@ -55,8 +55,10 @@ This means the current companies list, detail, edit, delete, and dashboard queri
 
    - Open the Supabase project.
    - Go to SQL Editor.
-   - Paste `supabase/migrations/202606270001_mvp_schema_and_rls.sql`.
-   - Run the SQL.
+   - Apply **all** files in `supabase/migrations/` in ascending filename order, not only the initial schema.
+   - In particular, ES update status needs both `202606270001_mvp_schema_and_rls.sql` (tables / `updated_at`) and `202610170001_es_document_versioning.sql` (version increment).
+   - Run `supabase/checks/es_update_status.sql` in the target SQL Editor. All eight rows must be `true`. This read-only check does not create/update/delete application data or change privileges/RLS.
+   - Then use a test account to create an ES and save it twice; confirm v1 → v2 → v3 and the persisted timestamps in the list/detail. Passing the catalog check alone is not an end-to-end acceptance check.
 
    Option B: Supabase CLI
 
@@ -75,7 +77,7 @@ This means the current companies list, detail, edit, delete, and dashboard queri
 
 ## Production setup
 
-1. Apply the same migration to the production Supabase project.
+1. Apply the same ordered migrations to the production Supabase project using the team's normal deployment procedure. Run the read-only ES check there too. Do not weaken RLS or grant anonymous write access to make a test pass.
 2. Set these Vercel environment variables for the production deployment:
 
    ```bash
