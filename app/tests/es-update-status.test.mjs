@@ -8,6 +8,7 @@ import * as jsxRuntime from "react/jsx-runtime";
 import typescript from "typescript";
 import { PGlite } from "@electric-sql/pglite";
 import * as es from "../src/lib/es.ts";
+import * as templates from "../src/lib/es-templates.ts";
 
 const OWNER = "10000000-0000-4000-8000-000000000001";
 const OTHER = "10000000-0000-4000-8000-000000000002";
@@ -152,10 +153,20 @@ test("real migrations, ES actions and rendered list/detail agree after saves", a
     },
     "next/link": { default: ({ children, ...props }) => React.createElement("a", props, children) },
     "react/jsx-runtime": jsxRuntime,
+    react: React,
+    "@/lib/es-templates": templates,
   };
   const actions = loadTsx("../src/app/es/actions.ts", dependencies);
   const list = loadTsx("../src/app/es/page.tsx", dependencies).default;
   const detail = loadTsx("../src/app/es/[id]/page.tsx", { ...dependencies, "../actions": actions }).default;
+  const formComponent = loadTsx("../src/components/es/es-form.tsx", dependencies);
+  const newForm = loadTsx("../src/components/es/new-es-form.tsx", {
+    ...dependencies, "./es-form": formComponent, "@/app/es/actions": actions,
+  });
+  const newPage = loadTsx("../src/app/es/new/page.tsx", {
+    ...dependencies, "@/components/es/new-es-form": newForm,
+  }).default;
+  const newHtml = async (params = {}) => renderToStaticMarkup(await newPage({ searchParams: Promise.resolve(params) }));
   const form = (content, id) => {
     const data = new FormData();
     data.set("company_id", COMPANY);
@@ -171,7 +182,7 @@ test("real migrations, ES actions and rendered list/detail agree after saves", a
   let id, created;
 
   await t.test("new documents start at v1 with matching list/detail timestamps", async () => {
-    await assert.rejects(actions.createEsDocument(form("before")), /redirect:\/es\/.+\?saved=created/);
+    await assert.rejects(actions.createEsDocument(undefined, form("before")), /redirect:\/es\/.+\?saved=created/);
     const rows = (await client.from("es_documents").select("id")).data;
     assert.equal(rows.length, 1);
     id = rows[0].id;
@@ -233,5 +244,89 @@ test("real migrations, ES actions and rendered list/detail agree after saves", a
     assert.equal((await read(id)).version, 4);
     await db.query("update es_documents set content=content where id=$1", [id]);
     assert.equal((await read(id)).version, 5);
+  });
+
+  await t.test("template chooser preserves the owned company and handles blank/unknown templates", async () => {
+    const chooser = await newHtml({ company: COMPANY });
+    for (const template of templates.ES_TEMPLATES) {
+      assert.ok(chooser.includes(`/es/new?company=${COMPANY}&amp;template=${template.id}`));
+      const html = await newHtml({ company: COMPANY, template: template.id });
+      assert.ok(html.includes(template.title));
+      assert.ok(html.includes(template.content));
+      assert.ok(html.includes(`value="${COMPANY}" selected=""`));
+      assert.ok(html.includes(`value="${template.doc_type}" selected=""`));
+    }
+    const blank = await newHtml({ template: "blank" });
+    assert.ok(blank.includes('value="entry_sheet" selected=""'));
+    assert.ok(!blank.includes(templates.ES_TEMPLATES[0].content));
+    const unknown = await newHtml({ template: "unknown" });
+    assert.ok(unknown.includes('role="alert"'));
+    assert.ok(!unknown.includes('<textarea'));
+    const unowned = await newHtml({ company: OTHER_COMPANY, template: "self_pr" });
+    assert.ok(!unowned.includes(OTHER_COMPANY));
+    assert.equal(templates.getEsTemplate("unknown"), undefined);
+  });
+
+  await t.test("all three templates save independently, edit and rerender without mutating their source", async () => {
+    const source = JSON.stringify(templates.ES_TEMPLATES);
+    for (const template of templates.ES_TEMPLATES) {
+      const data = form(template.content);
+      data.set("title", template.title);
+      data.set("doc_type", template.doc_type);
+      const create = async () => {
+        let savedId;
+        await assert.rejects(actions.createEsDocument(undefined, data), (error) => {
+          savedId = error.message.match(/^redirect:\/es\/([^?]+)\?saved=created$/)?.[1];
+          return Boolean(savedId);
+        });
+        return savedId;
+      };
+      const first = await create();
+      const second = await create();
+      assert.notEqual(first, second);
+      const row = await read(first);
+      assert.equal(row.company_id, COMPANY);
+      assert.equal(row.doc_type, template.doc_type);
+      assert.equal(row.content, template.content);
+      assert.equal(row.version, 1);
+      assert.ok((await detailHtml(first)).includes(template.content));
+      data.set("document_id", first);
+      data.set("content", `${template.name}を自分の経験で編集`);
+      await assert.rejects(actions.updateEsDocument(data), /saved=updated/);
+      assert.equal((await read(first)).version, 2);
+      assert.equal((await read(second)).content, template.content);
+      assert.ok((await detailHtml(first)).includes(`${template.name}を自分の経験で編集`));
+      assert.ok((await listHtml()).includes(template.title));
+      assert.ok((await newHtml({ template: template.id })).includes(template.content));
+    }
+    assert.equal(JSON.stringify(templates.ES_TEMPLATES), source);
+  });
+
+  await t.test("invalid input, foreign companies and failed inserts preserve the entered draft without writing", async () => {
+    const count = async () => (await db.query("select count(*)::int as n from es_documents")).rows[0].n;
+    const before = await count();
+    const data = form("  推敲中の本文\n改行も保持  ");
+    data.set("title", "");
+    const invalid = await actions.createEsDocument(undefined, data);
+    assert.equal(invalid.error, "ESタイトルを入力してください");
+    assert.equal(invalid.values.content, data.get("content"));
+    data.set("title", "下書き");
+    data.set("doc_type", "invalid");
+    assert.equal((await actions.createEsDocument(undefined, data)).error, "文書種別を選択してください");
+    data.set("doc_type", "self_pr");
+    data.set("company_id", OTHER_COMPANY);
+    assert.equal((await actions.createEsDocument(undefined, data)).error, "選択した企業を確認できません");
+    data.set("company_id", COMPANY);
+    await db.exec("reset role; revoke insert on es_documents from authenticated; set role authenticated");
+    try {
+      const failed = await actions.createEsDocument(undefined, data);
+      assert.equal(failed.error, "ESを保存できませんでした");
+      assert.equal(failed.values.content, data.get("content"));
+      assert.equal(failed.values.company_id, COMPANY);
+      assert.equal(failed.values.doc_type, "self_pr");
+      assert.equal(await count(), before);
+    } finally {
+      await db.exec("reset role; grant insert on es_documents to authenticated; set role authenticated");
+    }
   });
 });

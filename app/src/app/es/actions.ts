@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isEsDocumentType } from "@/lib/es";
+import type { EsCreateState } from "@/lib/es-templates";
 import { createClient } from "@/lib/supabase/server";
 
 function getText(formData: FormData, key: string) {
@@ -59,7 +60,7 @@ async function ownsCompany(
   return Boolean(data);
 }
 
-export async function createEsDocument(formData: FormData) {
+export async function createEsDocument(previous: EsCreateState, formData: FormData): Promise<EsCreateState> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -69,21 +70,23 @@ export async function createEsDocument(formData: FormData) {
     redirect("/login");
   }
 
+  const enteredValues = {
+    company_id: getText(formData, "company_id"),
+    title: String(formData.get("title") ?? ""),
+    doc_type: getText(formData, "doc_type"),
+    content: String(formData.get("content") ?? ""),
+  };
+  const failure = (error: string) => ({ attempt: (previous?.attempt ?? 0) + 1, error, values: enteredValues });
   let values: ReturnType<typeof parseDocumentValues>;
 
   try {
     values = parseDocumentValues(formData);
   } catch (error) {
-    const companyId = getText(formData, "company_id");
-    const path = companyId ? `/es/new?company=${encodeURIComponent(companyId)}` : "/es/new";
-    redirectWithError(
-      path,
-      error instanceof Error ? error.message : "入力内容を確認してください",
-    );
+    return failure(error instanceof Error ? error.message : "入力内容を確認してください");
   }
 
   if (!(await ownsCompany(supabase, user.id, values.company_id))) {
-    redirectWithError("/es/new", "選択した企業を確認できません");
+    return failure("選択した企業を確認できません");
   }
 
   const { data, error } = await supabase
@@ -93,7 +96,7 @@ export async function createEsDocument(formData: FormData) {
     .single();
 
   if (error || !data) {
-    redirectWithError("/es/new", "ESを保存できませんでした");
+    return failure("ESを保存できませんでした");
   }
 
   revalidatePath("/es");
