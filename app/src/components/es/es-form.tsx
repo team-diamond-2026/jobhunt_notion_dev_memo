@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { EsDraftValues } from "@/lib/es-templates";
+import type { EsDraftValues } from "@/lib/es";
 import {
   EsDocument,
   ES_DOCUMENT_TYPE_OPTIONS,
