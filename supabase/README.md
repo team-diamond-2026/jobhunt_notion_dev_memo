@@ -13,6 +13,9 @@ This directory contains the reproducible database setup for the Shukatsu OS MVP.
   - Increments `es_documents.version` for every update.
   - Uses the existing `touch_es_documents_updated_at` trigger to keep the displayed final-update time current.
   - Keeps historical content snapshots out of the MVP; Issue #61 tracks submission-version history.
+- `migrations/202611140001_es_document_authenticated_access.sql`
+  - Repairs `42501 / permission denied for table es_documents` for authenticated users in projects without default table grants.
+  - Grants only SELECT/INSERT/UPDATE/DELETE on `es_documents` to `authenticated`, after requiring the existing RLS/ownership policy. It does not grant anonymous access or change RLS rules.
 
 ## MVP tables
 
@@ -56,7 +59,7 @@ This means the current companies list, detail, edit, delete, and dashboard queri
    - Open the Supabase project.
    - Go to SQL Editor.
    - Apply **all** files in `supabase/migrations/` in ascending filename order, not only the initial schema.
-   - In particular, ES update status needs both `202606270001_mvp_schema_and_rls.sql` (tables / `updated_at`) and `202610170001_es_document_versioning.sql` (version increment).
+   - In particular, ES update status needs `202606270001_mvp_schema_and_rls.sql` (tables / `updated_at` / RLS), `202610170001_es_document_versioning.sql` (version increment), and `202611140001_es_document_authenticated_access.sql` (authenticated table privileges).
    - Run `supabase/checks/es_update_status.sql` in the target SQL Editor. All eight rows must be `true`. This read-only check does not create/update/delete application data or change privileges/RLS.
    - Then use a test account to create an ES and save it twice; confirm v1 → v2 → v3 and the persisted timestamps in the list/detail. Passing the catalog check alone is not an end-to-end acceptance check.
 

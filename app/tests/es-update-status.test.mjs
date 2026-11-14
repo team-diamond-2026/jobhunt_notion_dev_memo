@@ -111,12 +111,28 @@ test("real migrations, ES actions and rendered list/detail agree after saves", a
   await db.exec(versioning);
   await db.exec(`
     grant usage on schema public, auth to authenticated;
-    grant select, insert, update, delete on all tables in schema public to authenticated;
+    grant select, insert, update, delete on users, workspaces, companies to authenticated;
     insert into auth.users (id,email) values ('${OWNER}','owner@example.test'),('${OTHER}','other@example.test');
     insert into companies (id,user_id,company_name) values
       ('${COMPANY}','${OWNER}','ES検証企業'),('${OTHER_COMPANY}','${OTHER}','別利用者の企業');
-    set role authenticated;
   `);
+  const accessMigration = migration("202611140001_es_document_authenticated_access.sql");
+  await t.test("missing authenticated ES privileges reproduce 42501; the migration fixes only ES access", async () => {
+    await db.exec("set role authenticated");
+    await assert.rejects(db.query("select id from es_documents"), { code: "42501" });
+    await db.exec("reset role");
+    await db.exec(accessMigration);
+    await db.exec(accessMigration);
+    const result = (await db.query("select has_table_privilege('authenticated', 'public.es_documents', 'SELECT') as read, has_table_privilege('authenticated', 'public.es_documents', 'TRUNCATE') as truncate")).rows[0];
+    assert.equal(result.read, true);
+    assert.equal(result.truncate, false);
+  });
+  await t.test("the access migration refuses a missing RLS prerequisite", async () => {
+    await db.exec("alter table es_documents disable row level security");
+    await assert.rejects(db.exec(accessMigration), /Apply the MVP schema\/RLS migration/);
+    await db.exec("alter table es_documents enable row level security");
+  });
+  await db.exec("set role authenticated");
   const deploymentCheck = readFileSync(new URL("../../supabase/checks/es_update_status.sql", import.meta.url), "utf8");
   const checkRows = (await db.query(deploymentCheck)).rows;
   assert.equal(checkRows.length, 8);

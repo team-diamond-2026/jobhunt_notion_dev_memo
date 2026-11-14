@@ -46,10 +46,11 @@ with checks(check_name, ok) as (
       and polqual is not null and polwithcheck is not null
   )
   union all
-  select 'authenticated_select_insert_update', coalesce(
+  select 'authenticated_select_insert_update_delete', coalesce(
     has_table_privilege(to_regrole('authenticated'), to_regclass('public.es_documents'), 'SELECT')
     and has_table_privilege(to_regrole('authenticated'), to_regclass('public.es_documents'), 'INSERT')
-    and has_table_privilege(to_regrole('authenticated'), to_regclass('public.es_documents'), 'UPDATE'), false
+    and has_table_privilege(to_regrole('authenticated'), to_regclass('public.es_documents'), 'UPDATE')
+    and has_table_privilege(to_regrole('authenticated'), to_regclass('public.es_documents'), 'DELETE'), false
   )
 )
 select check_name, ok from checks order by check_name;
