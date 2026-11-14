@@ -4,6 +4,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "../lib/supabase/server";
 import { SELECTION_STATUS_OPTIONS } from "../lib/selection-status";
+import { UpcomingEvents } from "@/components/calendar/upcoming-events";
+import { CalendarEvent } from "@/lib/calendar";
 
 type Company = {
   id: string;
@@ -51,11 +53,21 @@ export default async function Home() {
   ).length;
 
   const recentCompanies = companies.slice(0, 5);
+  const now = new Date();
+  const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const { data: eventData, error: eventError } = await supabase
+    .from("events")
+    .select("id,title,event_type,start_at,end_at,related_company_id")
+    .gte("start_at", now.toISOString())
+    .lt("start_at", sevenDaysLater.toISOString())
+    .order("start_at", { ascending: true })
+    .limit(5);
+  const upcomingEvents = (eventData ?? []) as CalendarEvent[];
 
   return (
     <div className="ui-workspace">
       <main id="main-content" className="ui-main space-y-6">
-        <PageHeading title="ダッシュボード" description="企業情報と選考の進み具合を、ひとつの場所で確認できます。" />
+        <PageHeading title="ダッシュボード" description="企業情報、選考状況、直近の予定を、ひとつの場所で確認できます。" />
         <section className="ui-panel">
           <h2 className="text-xl sm:text-2xl font-bold text-black mb-3">
             ようこそ、{user.user_metadata?.display_name || user.email}さん
@@ -77,6 +89,13 @@ export default async function Home() {
               className="ui-button ui-primary"
             >
               選考管理ボードを見る
+            </Link>
+
+            <Link
+              href="/calendar"
+              className="ui-button ui-primary"
+            >
+              カレンダーを見る
             </Link>
 
             <Link
@@ -116,6 +135,8 @@ export default async function Home() {
             <p className="text-3xl font-bold text-black">{offerCount}</p>
           </div>
         </section>
+
+        <UpcomingEvents events={upcomingEvents} hasError={Boolean(eventError)} />
 
         <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <div className="ui-panel">
@@ -188,6 +209,7 @@ export default async function Home() {
                 <li>・企業ごとのESを下書きする</li>
                 <li>・選考ボードで進み具合を確認する</li>
                 <li>・面接の前に企業研究メモを見返す</li>
+                <li>・カレンダーで予定を登録・編集する</li>
               </ul>
             </div>
           </div>

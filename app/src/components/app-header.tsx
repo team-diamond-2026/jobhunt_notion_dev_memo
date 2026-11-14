@@ -7,6 +7,7 @@ const links = [
   { href: "/", label: "ダッシュボード" },
   { href: "/companies", label: "企業一覧" },
   { href: "/companies/board", label: "選考ボード" },
+  { href: "/calendar", label: "カレンダー" },
   { href: "/es", label: "ES管理" },
   { href: "/settings", label: "設定" },
 ];
