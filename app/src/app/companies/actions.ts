@@ -92,6 +92,7 @@ export async function createCompany(formData: FormData) {
   }
 
   revalidatePath("/companies");
+  revalidatePath("/companies/board");
 }
 
 export async function deleteCompany(formData: FormData) {
@@ -122,6 +123,7 @@ export async function deleteCompany(formData: FormData) {
   }
 
   revalidatePath("/companies");
+  revalidatePath("/companies/board");
 }
 
 export async function updateCompany(formData: FormData) {
@@ -192,6 +194,7 @@ export async function updateCompany(formData: FormData) {
   }
 
   revalidatePath("/companies");
+  revalidatePath("/companies/board");
   revalidatePath(`/companies/${companyId}`);
   redirect(`/companies/${companyId}`);
 }
