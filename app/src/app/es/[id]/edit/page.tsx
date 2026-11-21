@@ -1,18 +1,15 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { EsForm } from "@/components/es/es-form";
+import { EditEsForm } from "@/components/es/edit-es-form";
 import { EsDocument } from "@/lib/es";
 import { createClient } from "@/lib/supabase/server";
-import { updateEsDocument } from "../../actions";
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
 };
 
-export default async function EsEditPage({ params, searchParams }: PageProps) {
+export default async function EsEditPage({ params }: PageProps) {
   const { id } = await params;
-  const query = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -53,7 +50,7 @@ export default async function EsEditPage({ params, searchParams }: PageProps) {
 
       <main className="mx-auto max-w-4xl px-3 py-6 sm:px-4 sm:py-8">
         <section className="rounded-xl bg-white p-5 shadow sm:p-7">
-          <EsForm action={updateEsDocument} companies={companies ?? []} document={document as EsDocument} error={query.error} submitLabel="変更を保存" />
+          <EditEsForm companies={companies ?? []} document={document as EsDocument} />
         </section>
       </main>
     </div>

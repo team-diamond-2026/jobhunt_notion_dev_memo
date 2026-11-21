@@ -132,7 +132,9 @@ export default async function EsPage({ searchParams }: PageProps) {
                 </div>
                 <p className="mt-3 text-sm font-medium text-slate-700">{companyNames.get(document.company_id) ?? "企業不明"}</p>
                 <p className="mt-3 line-clamp-3 whitespace-pre-wrap text-sm leading-6 text-slate-600">{document.content || "本文はまだありません。"}</p>
-                <p className="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-500">最終更新日時 {formatEsUpdatedAt(document.updated_at)}</p>
+                <p className="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-500">
+                  最終更新日時 <time dateTime={document.updated_at}>{formatEsUpdatedAt(document.updated_at)}</time>（日本時間）
+                </p>
               </Link>
             ))}
           </section>

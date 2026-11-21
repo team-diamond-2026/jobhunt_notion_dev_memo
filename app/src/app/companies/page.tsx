@@ -19,7 +19,8 @@ type Company = {
 
 type PageProps = {
   searchParams: Promise<{
-    keyword?: string;
+    keyword?: string | string[];
+    q?: string | string[];
     industry?: string;
     status?: string;
     sort?: string;
@@ -68,7 +69,8 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
   }
 
   const resolvedSearchParams = await searchParams;
-  const keyword = String(resolvedSearchParams.keyword ?? "").trim();
+  const searchKeyword = resolvedSearchParams.keyword ?? resolvedSearchParams.q;
+  const keyword = (Array.isArray(searchKeyword) ? searchKeyword[0] : searchKeyword)?.trim() ?? "";
   const industry = String(resolvedSearchParams.industry ?? "").trim();
   const status = String(resolvedSearchParams.status ?? "all").trim();
   const sort = String(resolvedSearchParams.sort ?? "updated_desc").trim();
@@ -103,10 +105,11 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
   return (
     <div className="min-h-screen bg-slate-100">
       <nav className="border-b bg-white">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
+        <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <h1 className="text-2xl font-bold text-slate-950">企業一覧</h1>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <Link href="/interviews" className="inline-flex min-h-11 items-center rounded-md px-3 py-2 text-blue-600 hover:underline focus-visible:outline-2 focus-visible:outline-blue-600">面接ログ</Link>
             <Link href="/" className="text-sm text-blue-600 hover:underline">
               ダッシュボード
             </Link>
@@ -245,11 +248,18 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
                 登録済み企業
               </h2>
               <p className="mt-1 text-sm text-slate-600">
+                {keyword && <>「{keyword}」の</>}
                 検索結果: {companies.length} 件
               </p>
             </div>
 
-            <form method="get" className="grid gap-3 md:grid-cols-5">
+            <form
+              key={JSON.stringify([keyword, industry, status, sort])}
+              action="/companies"
+              method="get"
+              role="search"
+              className="grid gap-3 md:grid-cols-5"
+            >
               <div>
                 <label
                   htmlFor="keyword"

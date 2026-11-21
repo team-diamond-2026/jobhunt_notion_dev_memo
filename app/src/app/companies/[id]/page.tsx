@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { getInterviewLogs } from "../../interviews/data";
+import { InterviewList } from "../../interviews/interview-list";
+import { interviewButton, interviewLink } from "../../interviews/styles";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "../../../lib/supabase/server";
 import { updateCompany } from "../actions";
@@ -63,6 +66,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
   }
 
   const company = { ...data, selection_status: normalizeSelectionStatus(data.selection_status) } as Company;
+  const interviewLogs = await getInterviewLogs(supabase, user.id, company.id);
   const progressIndex = getProgressIndex(company.selection_status);
   const motivationLevel = Math.min(Math.max(company.motivation_level, 0), 5);
 
@@ -215,6 +219,14 @@ export default async function CompanyDetailPage({ params }: PageProps) {
           </section>
 
           <aside className="min-w-0 space-y-6">
+            <section aria-labelledby="company-interviews" className="min-w-0 space-y-4 [overflow-wrap:anywhere]">
+              <h2 id="company-interviews" className="text-xl font-bold text-slate-950">面接ログ</h2>
+              <div className="flex flex-col gap-2">
+                <Link href={`/interviews/new?company_id=${company.id}`} className={interviewButton}>この企業の面接を記録</Link>
+                <Link href={`/interviews?company_id=${company.id}`} className={interviewLink}>この企業の面接ログ一覧</Link>
+              </div>
+              <InterviewList logs={interviewLogs} companyId={company.id} />
+            </section>
             <form id="company-update" action={updateCompany} className="scroll-mt-4 rounded-xl bg-white p-4 shadow sm:p-6">
               <input type="hidden" name="company_id" value={company.id} />
               <input

@@ -1,0 +1,3 @@
+export const interviewLink = "inline-flex min-h-11 items-center justify-center rounded-md px-3 py-2 text-blue-600 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600";
+export const interviewButton = "inline-flex min-h-11 items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-60";
+export const interviewInput = "min-h-11 w-full min-w-0 rounded-md border border-slate-300 bg-white px-3 py-2 text-base text-slate-900 focus-visible:outline-2 focus-visible:outline-blue-600";
