@@ -12,6 +12,9 @@ export const SELECTION_STATUS_OPTIONS = [
 
 export type SelectionStatus = (typeof SELECTION_STATUS_OPTIONS)[number];
 
+export const SELECTION_CONFLICT_MESSAGE =
+  "別の画面で企業情報が更新されたため保存できませんでした。最新の内容を確認してください。";
+
 const LEGACY_STATUS_MAP: Record<string, SelectionStatus> = {
   未エントリー: "未応募",
   ES提出: "応募済み",
@@ -53,4 +56,5 @@ export type SelectionCompany = {
   motivation_level: number;
   memo?: string | null;
   selection_status: string | null;
+  updated_at: string;
 };

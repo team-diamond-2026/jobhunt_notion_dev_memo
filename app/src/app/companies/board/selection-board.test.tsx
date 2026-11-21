@@ -6,6 +6,9 @@ import type { SelectionCompany } from "../../../lib/selection-status";
 import { updateSelectionStatus } from "./actions";
 import { SelectionBoard } from "./selection-board";
 
+const { refresh } = vi.hoisted(() => ({ refresh: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
+
 vi.mock("./actions", () => ({ updateSelectionStatus: vi.fn() }));
 
 const companies: SelectionCompany[] = [{
@@ -14,6 +17,7 @@ const companies: SelectionCompany[] = [{
   industry: "IT",
   motivation_level: 5,
   selection_status: "応募済み",
+  updated_at: "2026-11-21T00:00:00.000Z",
 }];
 
 function dragTo(status: string) {
@@ -43,7 +47,7 @@ describe("SelectionBoard", () => {
     expect(destination.className).toContain("border-blue-500");
     fireEvent.drop(destination, { dataTransfer });
 
-    expect(updateSelectionStatus).toHaveBeenCalledWith(companies[0].id, "一次面接");
+    expect(updateSelectionStatus).toHaveBeenCalledWith(companies[0].id, "一次面接", companies[0].selection_status, companies[0].updated_at);
     expect(within(destination).getByRole("article")).toBeTruthy();
     expect(screen.getByRole<HTMLSelectElement>("combobox").disabled).toBe(true);
     expect(destination.className).not.toContain("border-blue-500");
@@ -66,6 +70,7 @@ describe("SelectionBoard", () => {
     expect(screen.getByRole("alert").textContent).toContain("保存失敗");
     expect(within(screen.getByRole("region", { name: "応募済み" })).getByRole("article")).toBeTruthy();
     expect(within(destination).queryByRole("article")).toBeNull();
+    expect(refresh).toHaveBeenCalledOnce();
     expect(screen.getByRole<HTMLSelectElement>("combobox").disabled).toBe(false);
   });
 
@@ -88,19 +93,23 @@ describe("SelectionBoard", () => {
     expect(within(screen.getByRole("region", { name: "応募済み" })).queryByRole("article")).toBeNull();
   });
 
-  it("通信例外でも元の列へ戻す", async () => {
+  it("通信切断で保存結果が不明なら再読込まで移動を止める", async () => {
     vi.mocked(updateSelectionStatus).mockRejectedValue(new Error("network"));
     render(<SelectionBoard companies={companies} />);
     await act(async () => { fireEvent.change(screen.getByRole("combobox"), { target: { value: "内定" } }); });
-    expect(screen.getByRole("alert").textContent).toContain("通信状態");
+    expect(screen.getByRole("alert").textContent).toContain("保存結果を確認できません");
     expect(within(screen.getByRole("region", { name: "応募済み" })).getByRole("article")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "ボードを再読み込み" })).toBeTruthy();
+    expect(screen.getByRole<HTMLSelectElement>("combobox").disabled).toBe(true);
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "一次面接" } });
+    expect(updateSelectionStatus).toHaveBeenCalledTimes(1);
   });
 
   it("移動先セレクトでも同じ保存処理を使う", async () => {
     vi.mocked(updateSelectionStatus).mockResolvedValue({ ok: false, error: "保存失敗" });
     render(<SelectionBoard companies={companies} />);
     await act(async () => { fireEvent.change(screen.getByLabelText("移動先"), { target: { value: "最終面接" } }); });
-    expect(updateSelectionStatus).toHaveBeenCalledWith(companies[0].id, "最終面接");
+    expect(updateSelectionStatus).toHaveBeenCalledWith(companies[0].id, "最終面接", companies[0].selection_status, companies[0].updated_at);
   });
 
   it("同じ列へのドロップでは更新しない", () => {
@@ -137,8 +146,8 @@ describe("SelectionBoard", () => {
   it("既存の未定義ステータスも非表示にせず、標準ステータスへ変更できる", async () => {
     vi.mocked(updateSelectionStatus).mockResolvedValue({ ok: false, error: "保存失敗" });
     render(<SelectionBoard companies={[{ ...companies[0], selection_status: "書類選考" }]} />);
-    expect(within(screen.getByRole("region", { name: "未設定・その他" })).getByRole("article")).toBeTruthy();
+    expect(within(screen.getByRole("region", { name: "未応募" })).getByRole("article")).toBeTruthy();
     await act(async () => { fireEvent.change(screen.getByRole("combobox"), { target: { value: "一次面接" } }); });
-    expect(updateSelectionStatus).toHaveBeenCalledWith(companies[0].id, "一次面接");
+    expect(updateSelectionStatus).toHaveBeenCalledWith(companies[0].id, "一次面接", "書類選考", companies[0].updated_at);
   });
 });

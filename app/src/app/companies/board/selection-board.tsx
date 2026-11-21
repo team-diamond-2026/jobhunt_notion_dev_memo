@@ -2,18 +2,22 @@
 
 import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   canAdvanceSelectionStatus,
   isSelectionStatus,
+  normalizeSelectionStatus,
   SELECTION_STATUS_OPTIONS,
   type SelectionCompany,
   type SelectionStatus,
 } from "../../../lib/selection-status";
 import { updateSelectionStatus } from "./actions";
 
-const otherStatus = "未設定・その他";
-
-export function SelectionBoard({ companies }: { companies: SelectionCompany[] }) {
+export function SelectionBoard({ companies, selectedStatus = "" }: {
+  companies: SelectionCompany[];
+  selectedStatus?: SelectionStatus | "";
+}) {
+  const router = useRouter();
   const [optimisticCompanies, moveCompany] = useOptimistic(
     companies,
     (current, change: { id: string; status: SelectionStatus }) =>
@@ -28,13 +32,13 @@ export function SelectionBoard({ companies }: { companies: SelectionCompany[] })
   const [overStatus, setOverStatus] = useState<SelectionStatus | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const columns = optimisticCompanies.some((company) => !isSelectionStatus(company.selection_status))
-    ? [...SELECTION_STATUS_OPTIONS, otherStatus]
-    : SELECTION_STATUS_OPTIONS;
+  const [needsReload, setNeedsReload] = useState(false);
+  const isBusy = isPending || needsReload;
+  const columns = selectedStatus ? [selectedStatus] : SELECTION_STATUS_OPTIONS;
 
   useEffect(() => {
     if (!isPending && focusAfterMove.current) {
-      document.getElementById(`move-${focusAfterMove.current}`)?.focus();
+      (document.getElementById(`move-${focusAfterMove.current}`) ?? document.getElementById("board-status"))?.focus();
       focusAfterMove.current = null;
     }
   }, [isPending]);
@@ -46,7 +50,7 @@ export function SelectionBoard({ companies }: { companies: SelectionCompany[] })
 
   function move(id: string, status: SelectionStatus) {
     const company = optimisticCompanies.find((item) => item.id === id);
-    if (!company || company.selection_status === status || saving.current || isPending) return;
+    if (!company || normalizeSelectionStatus(company.selection_status ?? "") === status || saving.current || isBusy) return;
     if (!canAdvanceSelectionStatus(company.selection_status ?? "", status)) return;
 
     saving.current = true;
@@ -55,16 +59,18 @@ export function SelectionBoard({ companies }: { companies: SelectionCompany[] })
     startTransition(async () => {
       moveCompany({ id, status });
       try {
-        const result = await updateSelectionStatus(id, status);
+        const result = await updateSelectionStatus(id, status, company.selection_status, company.updated_at);
         if (!result.ok) {
           setError(result.error);
           setMessage("");
+          startTransition(() => router.refresh());
         } else {
           setMessage(`${company.company_name}を${status}へ移動しました。`);
         }
       } catch {
-        setError("選考ステータスを保存できませんでした。通信状態を確認して、もう一度お試しください。");
+        setError("通信が切断され、選考ステータスの保存結果を確認できませんでした。再読み込みして最新の状態を確認してください。");
         setMessage("");
+        setNeedsReload(true);
       } finally {
         saving.current = false;
       }
@@ -74,7 +80,12 @@ export function SelectionBoard({ companies }: { companies: SelectionCompany[] })
   return (
     <div className="min-w-0 space-y-3">
       <p role="status" className="min-h-6 text-sm text-slate-600">{message}</p>
-      {error && <p role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-red-700">{error} 元の列に戻しました。</p>}
+      {error && <p role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-red-700">{error}</p>}
+      {needsReload && (
+        <button type="button" onClick={() => window.location.reload()} className="min-h-11 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-blue-600">
+          ボードを再読み込み
+        </button>
+      )}
       {companies.length === 0 && (
         <p className="text-slate-600">まだ企業が登録されていません。「企業一覧・登録」から追加してください。</p>
       )}
@@ -83,12 +94,10 @@ export function SelectionBoard({ companies }: { companies: SelectionCompany[] })
         aria-label="選考ステータス別の企業"
         aria-describedby="board-instructions"
         tabIndex={0}
-        className="flex gap-4 overflow-x-auto rounded-lg pb-4 focus-visible:outline-2 focus-visible:outline-blue-600"
+        className="grid grid-cols-1 gap-4 rounded-lg pb-4 focus-visible:outline-2 focus-visible:outline-blue-600 md:flex md:overflow-x-auto"
       >
         {columns.map((status) => {
-          const items = optimisticCompanies.filter((company) => status === otherStatus
-            ? !isSelectionStatus(company.selection_status)
-            : company.selection_status === status);
+          const items = optimisticCompanies.filter((company) => normalizeSelectionStatus(company.selection_status ?? "") === status);
           const isOver = overStatus === status;
 
           return (
@@ -97,7 +106,7 @@ export function SelectionBoard({ companies }: { companies: SelectionCompany[] })
               aria-label={status}
               onDragOver={(event) => {
                 const dragging = optimisticCompanies.find((company) => company.id === draggingId);
-                if (!dragging || saving.current || !isSelectionStatus(status) || !canAdvanceSelectionStatus(dragging.selection_status ?? "", status)) {
+                if (!dragging || saving.current || isBusy || !isSelectionStatus(status) || !canAdvanceSelectionStatus(dragging.selection_status ?? "", status)) {
                   setOverStatus(null);
                   return;
                 }
@@ -116,7 +125,7 @@ export function SelectionBoard({ companies }: { companies: SelectionCompany[] })
                 resetDrag();
                 if (id && isSelectionStatus(status)) move(id, status);
               }}
-              className={`min-h-64 w-64 shrink-0 rounded-lg border-2 p-3 transition-colors ${isOver ? "border-blue-500 bg-blue-50" : "border-slate-200 bg-slate-50"}`}
+              className={`min-w-0 rounded-lg border-2 p-3 transition-colors md:min-h-[500px] md:w-80 md:shrink-0 ${isOver ? "border-blue-500 bg-blue-50" : "border-slate-200 bg-slate-50"}`}
             >
               <h2 className="mb-3 flex items-center justify-between gap-2 font-semibold">
                 {status}<span className="rounded-full bg-white px-2 py-1 text-sm text-slate-600">{items.length}件</span>
@@ -126,7 +135,7 @@ export function SelectionBoard({ companies }: { companies: SelectionCompany[] })
                   <article
                     key={company.id}
                     aria-label={company.company_name}
-                    draggable={!isPending}
+                    draggable={!isBusy}
                     onDragStart={(event) => {
                       if (saving.current || (event.target as HTMLElement).closest("select")) {
                         event.preventDefault();
@@ -138,7 +147,7 @@ export function SelectionBoard({ companies }: { companies: SelectionCompany[] })
                       setError("");
                     }}
                     onDragEnd={resetDrag}
-                    className={`min-w-0 space-y-2 rounded-lg border border-slate-200 bg-white p-3 shadow-sm [overflow-wrap:anywhere] ${isPending ? "cursor-wait" : "cursor-grab active:cursor-grabbing"} ${draggingId === company.id ? "opacity-50" : ""}`}
+                    className={`min-w-0 space-y-2 rounded-lg border border-slate-200 bg-white p-3 shadow-sm [overflow-wrap:anywhere] ${isBusy ? "cursor-default" : "cursor-grab active:cursor-grabbing"} ${draggingId === company.id ? "opacity-50" : ""}`}
                   >
                     <h3 className="font-semibold">
                       <Link href={`/companies/${company.id}`} draggable={false} className="rounded-sm hover:text-blue-600 hover:underline focus-visible:outline-2 focus-visible:outline-blue-600">{company.company_name}</Link>
@@ -146,11 +155,12 @@ export function SelectionBoard({ companies }: { companies: SelectionCompany[] })
                     <p className="text-sm text-slate-600">業界: {company.industry || "未設定"}</p>
                     <p className="text-sm text-slate-600">志望度: {company.motivation_level}</p>
                     <p className="line-clamp-3 whitespace-pre-wrap text-sm text-slate-600">メモ: {company.memo || "なし"}</p>
+                    <Link href={`/companies/${company.id}#company-update`} className="inline-flex min-h-11 items-center text-sm font-medium text-blue-600 hover:underline" draggable={false}>ステータスを変更</Link>
                     <label htmlFor={`move-${company.id}`} className="block text-sm text-slate-600">移動先</label>
                     <select
                       id={`move-${company.id}`}
-                      value={isSelectionStatus(company.selection_status) ? company.selection_status : ""}
-                      disabled={isPending}
+                      value={normalizeSelectionStatus(company.selection_status ?? "")}
+                      disabled={isBusy}
                       onChange={(event) => {
                         if (isSelectionStatus(event.target.value)) {
                           focusAfterMove.current = company.id;
@@ -159,7 +169,6 @@ export function SelectionBoard({ companies }: { companies: SelectionCompany[] })
                       }}
                       className="min-h-11 w-full min-w-0 rounded-md border border-slate-300 bg-white px-2 py-2 text-base focus-visible:outline-2 focus-visible:outline-blue-600 disabled:opacity-60"
                     >
-                      {!isSelectionStatus(company.selection_status) && <option value="" disabled>{company.selection_status || "未設定"}</option>}
                       {SELECTION_STATUS_OPTIONS.map((option) => <option key={option} value={option} disabled={!canAdvanceSelectionStatus(company.selection_status ?? "", option)}>{option}</option>)}
                     </select>
                   </article>
