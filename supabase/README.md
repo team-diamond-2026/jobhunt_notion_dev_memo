@@ -14,6 +14,12 @@ This directory contains the reproducible database setup for the Shukatsu OS MVP.
   - Uses the existing `touch_es_documents_updated_at` trigger to keep the displayed final-update time current.
   - Keeps historical content snapshots out of the MVP; Issue #61 tracks submission-version history.
 
+- `migrations/20261114000000_interview_log_access.sql`
+  - Reuses the existing interview log schema, ownership policies, and update timestamp trigger.
+  - Adds an index for company-specific interview history and limits writes to input columns.
+  - Preserves existing JSON arrays, timestamps, nullable fields, and stored records.
+  - Apply after the MVP migration, before using the interview log screens.
+
 ## MVP tables
 
 The migration creates these tables:
@@ -57,6 +63,7 @@ This means the current companies list, detail, edit, delete, and dashboard queri
    - Go to SQL Editor.
    - Paste `supabase/migrations/202606270001_mvp_schema_and_rls.sql`.
    - Run the SQL.
+   - Apply subsequent migrations in filename order, including `20261114000000_interview_log_access.sql` for interview logs.
 
    Option B: Supabase CLI
 
