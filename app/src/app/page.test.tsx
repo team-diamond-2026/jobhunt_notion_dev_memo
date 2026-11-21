@@ -29,11 +29,16 @@ function mockDashboard(eventError: { message: string } | null = null) {
       error: null,
     }),
   };
+  const workspacesQuery = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+  };
   mocks.createClient.mockResolvedValue({
     auth: { getUser: async () => ({ data: { user: { id: "user-1", email: "test@example.com" } } }) },
     from: (table: string) => {
       if (table === "companies") return companiesQuery;
       if (table === "events") return eventsQuery;
+      if (table === "workspaces") return workspacesQuery;
       throw new Error(`Unexpected table: ${table}`);
     },
   });

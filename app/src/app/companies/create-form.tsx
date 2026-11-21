@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { SELECTION_STATUS_OPTIONS } from "@/lib/selection-status";
 import { createCompany } from "./actions";
+import { DeadlineFields } from "./deadline-fields";
 import { IndustryFields } from "./industry-fields";
 
 export function CompanyCreateForm() {
@@ -58,6 +59,7 @@ export function CompanyCreateForm() {
             <label htmlFor="memo" className="ui-label">メモ</label>
             <textarea id="memo" name="memo" rows={3} placeholder="企業研究メモ、気になる点、次に確認すること" className="ui-field" />
           </div>
+          <DeadlineFields />
           <div className="sm:col-span-2 sm:flex sm:justify-end">
             <button type="submit" className="ui-button ui-primary w-full sm:w-auto">{pending ? "登録中..." : "企業を登録"}</button>
           </div>

@@ -8,13 +8,21 @@ import { UpcomingEvents } from "@/components/calendar/upcoming-events";
 import {
   CalendarEvent,
   CALENDAR_EVENT_COLUMNS,
+  dateKeyToStartIso,
+  eventDateKey,
+  formatDateLabel,
+  formatEventDateTime,
+  getCalendarPeriod,
   getUpcomingEventRange,
+  shiftDateKey,
+  todayDateKey,
   UPCOMING_EVENT_LIMIT,
 } from "@/lib/calendar";
 
 type Company = {
   id: string;
   user_id: string;
+  workspace_id: string | number | null;
   company_name: string;
   industry: string | null;
   motivation_level: number;
@@ -28,6 +36,20 @@ type Kpi = {
   label: string;
   value: number;
   description: string;
+};
+
+type DeadlineTask = {
+  id: string;
+  title: string;
+  due_date: string;
+  status: string;
+  priority: number | string;
+  related_company_id: string | null;
+};
+
+type CompanyName = {
+  id: string;
+  company_name: string;
 };
 
 export default async function Home() {
@@ -54,6 +76,91 @@ export default async function Home() {
     ...company,
     selection_status: normalizeSelectionStatus(company.selection_status),
   }));
+
+  const todayKey = todayDateKey();
+  const weekPeriod = getCalendarPeriod("week", todayKey);
+  const { data: workspaces, error: workspacesError } = await supabase
+    .from("workspaces")
+    .select("id")
+    .eq("user_id", user.id);
+
+  const workspaceIds = (workspaces ?? []).map((workspace) => workspace.id);
+
+  let scheduleEvents: CalendarEvent[] = [];
+  let deadlineTasks: DeadlineTask[] = [];
+  let todayScheduleError = workspacesError?.message ?? null;
+  let weeklyDeadlinesError = workspacesError?.message ?? null;
+
+  if (!workspacesError && workspaceIds.length > 0) {
+    const todayStart = dateKeyToStartIso(todayKey);
+    const tomorrowStart = dateKeyToStartIso(shiftDateKey(todayKey, 1));
+    const weekEnd = dateKeyToStartIso(weekPeriod.endKeyExclusive);
+    const [eventsResult, todayTasksResult, weeklyTasksResult] = await Promise.all([
+      supabase
+        .from("events")
+        .select("id, title, event_type, start_at, end_at, related_company_id")
+        .in("workspace_id", workspaceIds)
+        .gte("start_at", todayStart)
+        .lt("start_at", tomorrowStart)
+        .order("start_at", { ascending: true })
+        .limit(5),
+      supabase
+        .from("tasks")
+        .select("id, title, due_date, status, priority, related_company_id")
+        .in("workspace_id", workspaceIds)
+        .in("status", ["todo", "doing"])
+        .gte("due_date", todayStart)
+        .lt("due_date", tomorrowStart)
+        .not("due_date", "is", null)
+        .order("due_date", { ascending: true })
+        .limit(10),
+      supabase
+        .from("tasks")
+        .select("id, title, due_date, status, priority, related_company_id")
+        .in("workspace_id", workspaceIds)
+        .in("status", ["todo", "doing"])
+        .gte("due_date", tomorrowStart)
+        .lt("due_date", weekEnd)
+        .not("due_date", "is", null)
+        .order("due_date", { ascending: true })
+        .limit(10),
+    ]);
+
+    todayScheduleError = eventsResult.error?.message ?? todayTasksResult.error?.message ?? null;
+    weeklyDeadlinesError = weeklyTasksResult.error?.message ?? null;
+    scheduleEvents = (eventsResult.data ?? []) as CalendarEvent[];
+    deadlineTasks = [
+      ...(todayTasksResult.data ?? []),
+      ...(weeklyTasksResult.data ?? []),
+    ].map((task) => task as DeadlineTask);
+  }
+
+  const todayDeadlineTasks = deadlineTasks.filter((task) => eventDateKey(task.due_date) === todayKey);
+  const weeklyDeadlineTasks = deadlineTasks.filter((task) => eventDateKey(task.due_date) !== todayKey);
+
+  const relatedCompanyIds = [
+    ...new Set(
+      [...scheduleEvents, ...deadlineTasks]
+        .map((item) => item.related_company_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  let relatedCompanies: CompanyName[] = [];
+
+  if (relatedCompanyIds.length > 0) {
+    const { data: relatedCompanyData, error: relatedCompanyError } = await supabase
+      .from("companies")
+      .select("id, company_name")
+      .in("id", relatedCompanyIds);
+
+    if (!relatedCompanyError) {
+      relatedCompanies = (relatedCompanyData ?? []) as CompanyName[];
+    }
+  }
+
+  const companyNameById = new Map(
+    relatedCompanies.map((company) => [company.id, company.company_name]),
+  );
 
   const totalCompanies = companies.length;
   const notEnteredCount = companies.filter(
@@ -260,6 +367,97 @@ export default async function Home() {
               </ul>
             </div>
           </div>
+        </section>
+        <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <section
+            className="bg-white rounded-xl shadow p-6"
+            aria-labelledby="today-schedule-heading"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 id="today-schedule-heading" className="text-2xl font-bold text-black">
+                今日の予定
+              </h3>
+              <span className="text-sm text-slate-500">
+                {scheduleEvents.length + todayDeadlineTasks.length}件
+              </span>
+            </div>
+            {todayScheduleError ? (
+              <p className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" role="status">
+                今日の予定を取得できませんでした。時間を置いて再読み込みしてください。
+              </p>
+            ) : scheduleEvents.length === 0 && todayDeadlineTasks.length === 0 ? (
+              <p className="text-slate-500">今日の予定はありません。</p>
+            ) : (
+              <div className="space-y-3">
+                {scheduleEvents.map((event) => (
+                  <div key={event.id} className="border rounded-lg p-4">
+                    <p className="font-semibold text-black">{event.title}</p>
+                    <p className="text-sm text-slate-600 mt-1">
+                      {formatEventDateTime(event.start_at)}
+                      {event.event_type ? ` · ${event.event_type}` : ""}
+                    </p>
+                    {event.related_company_id && companyNameById.get(event.related_company_id) ? (
+                      <p className="text-sm text-slate-600 mt-1">
+                        {companyNameById.get(event.related_company_id)}
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+                {todayDeadlineTasks.map((task) => (
+                  <div key={task.id} className="border rounded-lg p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="font-semibold text-black">{task.title}</p>
+                      <span className="shrink-0 text-sm text-slate-600">
+                        {formatDateLabel(eventDateKey(task.due_date))}
+                      </span>
+                    </div>
+                    {task.related_company_id && companyNameById.get(task.related_company_id) ? (
+                      <p className="text-sm text-slate-600 mt-1">
+                        {companyNameById.get(task.related_company_id)}
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section
+            className="bg-white rounded-xl shadow p-6"
+            aria-labelledby="weekly-deadlines-heading"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 id="weekly-deadlines-heading" className="text-2xl font-bold text-black">
+                今週の締切
+              </h3>
+              <span className="text-sm text-slate-500">{weeklyDeadlineTasks.length}件</span>
+            </div>
+            {weeklyDeadlinesError ? (
+              <p className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" role="status">
+                今週の締切を取得できませんでした。時間を置いて再読み込みしてください。
+              </p>
+            ) : weeklyDeadlineTasks.length === 0 ? (
+              <p className="text-slate-500">今週の締切はありません。</p>
+            ) : (
+              <div className="space-y-3">
+                {weeklyDeadlineTasks.map((task) => (
+                  <div key={task.id} className="border rounded-lg p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="font-semibold text-black">{task.title}</p>
+                      <span className="shrink-0 text-sm text-slate-600">
+                        {formatDateLabel(eventDateKey(task.due_date))}
+                      </span>
+                    </div>
+                    {task.related_company_id && companyNameById.get(task.related_company_id) ? (
+                      <p className="text-sm text-slate-600 mt-1">
+                        {companyNameById.get(task.related_company_id)}
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
         </section>
       </main>
     </div>

@@ -21,6 +21,9 @@ This directory contains the reproducible database setup for the Shukatsu OS MVP.
 - `migrations/202611140001_es_document_authenticated_access.sql`
   - Repairs `42501 / permission denied for table es_documents` for authenticated users in projects without default table grants.
   - Grants SELECT/INSERT/UPDATE/DELETE on `es_documents` to `authenticated` and requires the existing ownership policy and RLS.
+- `migrations/202611210001_company_deadline_atomic_rpc.sql`
+  - Saves a company and its deadline task in one transaction. The functions use the signed-in user's permissions and the existing company, workspace, and task RLS policies.
+  - Apply before enabling deadline saves in the company forms.
 
 ## MVP tables
 

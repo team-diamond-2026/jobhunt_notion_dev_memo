@@ -11,10 +11,12 @@ import {
   SELECTION_CONFLICT_MESSAGE,
   SELECTION_STATUS_OPTIONS,
 } from "../../../lib/selection-status";
+import { DeadlineFields, type DeadlineTask } from "../deadline-fields";
 
 type Company = {
   id: string;
   user_id: string;
+  workspace_id: string;
   company_name: string;
   industry: string | null;
   industry_category: string | null;
@@ -68,7 +70,23 @@ export default async function CompanyDetailPage({ params, searchParams }: PagePr
     notFound();
   }
 
-  const company = { ...data, selection_status: normalizeSelectionStatus(data.selection_status) } as Company;
+  const company = {
+    ...data,
+    selection_status: normalizeSelectionStatus(data.selection_status),
+  } as Company;
+  const { data: deadlineTask, error: deadlineTaskError } = await supabase
+    .from("tasks")
+    .select("id, title, due_date, priority, updated_at")
+    .eq("related_company_id", company.id)
+    .eq("workspace_id", company.workspace_id)
+    .in("status", ["todo", "doing"])
+    .not("due_date", "is", null)
+    .order("due_date", { ascending: true })
+    .order("id", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+
   const interviewLogs = await getInterviewLogs(supabase, user.id, company.id);
   const progressIndex = getProgressIndex(company.selection_status);
   const motivationLevel = Math.min(Math.max(company.motivation_level, 0), 5);
@@ -276,6 +294,12 @@ export default async function CompanyDetailPage({ params, searchParams }: PagePr
                     ))}
                   </select>
                 </div>
+
+                {deadlineTaskError ? (
+                  <p role="status" className="text-sm text-amber-900">締切タスクを取得できませんでした。企業情報は更新できます。</p>
+                ) : (
+                  <DeadlineFields task={deadlineTask as DeadlineTask | null} />
+                )}
 
                 <div>
                   <label

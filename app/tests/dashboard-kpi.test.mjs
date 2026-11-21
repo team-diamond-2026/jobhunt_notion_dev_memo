@@ -40,7 +40,8 @@ const companies = [
   updated_at: "2026-11-01T00:00:00Z",
 }));
 
-function loadPage(records = companies) {
+function loadPage(records = companies, { events = [], todayTasks = [], weeklyTasks = [] } = {}) {
+  let taskQueryCount = 0;
   const dependencies = {
     "react/jsx-runtime": jsxRuntime,
     "next/link": { default: ({ children, ...props }) => React.createElement("a", props, children) },
@@ -49,10 +50,21 @@ function loadPage(records = companies) {
       createClient: async () => ({
         auth: { getUser: async () => ({ data: { user: { id: "user-1", email: "user@example.com" } } }) },
         from(table) {
-          const result = table === "companies" ? records : [];
+          const result = table === "companies"
+            ? records
+            : table === "workspaces"
+              ? [{ id: "workspace-1" }]
+              : table === "events"
+                ? events
+                : table === "tasks"
+                  ? (taskQueryCount++ === 0 ? todayTasks : weeklyTasks)
+              : [];
           const query = {
             select() { return query; },
             order() { return query; },
+            eq() { return query; },
+            in() { return query; },
+            not() { return query; },
             gte() { return query; },
             lt() { return query; },
             limit() { return query; },
@@ -90,4 +102,43 @@ test("KPIは正規化済みの選考ステータスを集計し、0件も表示�
   const emptyHtml = renderToStaticMarkup(await loadPage([])());
   assert.equal((emptyHtml.match(/>0<\/p>/g) ?? []).length, 6);
   assert.doesNotMatch(emptyHtml, /ES提出|Webテスト/);
+});
+
+test("今日の予定と今週の締切は、今日の締切を重複表示しない", async () => {
+  const today = calendar.todayDateKey();
+  const tomorrow = calendar.shiftDateKey(today, 1);
+  const todayStart = calendar.dateKeyToStartIso(today);
+  const tomorrowStart = calendar.dateKeyToStartIso(tomorrow);
+  const html = renderToStaticMarkup(await loadPage([], {
+    events: [{
+      id: "today-event",
+      title: "今日の面接",
+      event_type: "interview",
+      start_at: todayStart,
+      end_at: null,
+      related_company_id: null,
+    }],
+    todayTasks: [{
+      id: "today-task",
+      title: "今日のES提出",
+      due_date: todayStart,
+      status: "todo",
+      priority: "high",
+      related_company_id: null,
+    }],
+    weeklyTasks: [{
+      id: "weekly-task",
+      title: "明日のWebテスト",
+      due_date: tomorrowStart,
+      status: "doing",
+      priority: "medium",
+      related_company_id: null,
+    }],
+  })());
+
+  assert.match(html, /今日の予定[\s\S]*?2件/);
+  assert.match(html, /今週の締切[\s\S]*?1件/);
+  assert.match(html, /今日のES提出/);
+  assert.match(html, /明日のWebテスト/);
+  assert.equal((html.match(/今日のES提出/g) ?? []).length, 1);
 });
