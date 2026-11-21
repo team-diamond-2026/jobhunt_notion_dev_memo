@@ -65,6 +65,8 @@ export default function LoginPage() {
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -92,6 +94,8 @@ export default function LoginPage() {
     setMode(nextMode);
     setError(null);
     setSuccessMessage(null);
+    setConfirmPassword("");
+    setTermsAccepted(false);
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -119,7 +123,27 @@ export default function LoginPage() {
           return;
         }
 
-        await signUp(email, password, displayName);
+        if (!displayName.trim()) {
+          setError("表示名を入力してください。");
+          return;
+        }
+
+        if (password.length < 6) {
+          setError("パスワードは6文字以上で入力してください。");
+          return;
+        }
+
+        if (password !== confirmPassword) {
+          setError("パスワードと確認用パスワードが一致しません。");
+          return;
+        }
+
+        if (!termsAccepted) {
+          setError("利用規約と注意事項に同意してください。");
+          return;
+        }
+
+        await signUp(email, password, displayName.trim());
         setSuccessMessage(
           "アカウントを作成しました。確認メールを送信したので、メール内のリンクを開いてからログインしてください。",
         );
@@ -127,6 +151,8 @@ export default function LoginPage() {
         setDisplayName("");
         setEmail("");
         setPassword("");
+        setConfirmPassword("");
+        setTermsAccepted(false);
         setSignUpCooldown(60);
         return;
       }
@@ -188,6 +214,8 @@ export default function LoginPage() {
                   value={displayName}
                   onChange={(event) => setDisplayName(event.target.value)}
                   placeholder="山田 太郎"
+                  autoComplete="name"
+                  required
                   className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm"
                 />
               </div>
@@ -231,7 +259,48 @@ export default function LoginPage() {
                   required
                   className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm"
                 />
+                {isSignUp && (
+                  <p className="mt-1 text-xs text-gray-600">
+                    パスワードは6文字以上で入力してください。
+                  </p>
+                )}
               </div>
+            )}
+
+            {isSignUp && (
+              <div>
+                <label
+                  htmlFor="confirmPassword"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  パスワード（確認）
+                </label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  placeholder="もう一度入力してください"
+                  minLength={6}
+                  required
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm"
+                />
+              </div>
+            )}
+
+            {isSignUp && (
+              <label className="flex items-start gap-3 rounded-md bg-gray-50 p-3 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(event) => setTermsAccepted(event.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span>
+                  利用規約と注意事項を確認し、入力した情報を就活管理のために保存することに同意します。
+                </span>
+              </label>
             )}
 
             <button
