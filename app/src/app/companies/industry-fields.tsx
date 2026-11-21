@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
   INDUSTRY_CATEGORIES,
   INDUSTRY_CATEGORY_OTHER,
@@ -16,36 +16,25 @@ export function IndustryFields({
   initialOther = "",
 }: IndustryFieldsProps) {
   const [category, setCategory] = useState(initialCategory);
-  const fieldsRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const form = fieldsRef.current?.closest("form");
-    const submitButtons = form?.querySelectorAll<HTMLButtonElement>(
-      'button[type="submit"]',
-    );
-
-    submitButtons?.forEach((button) => {
-      button.disabled = !category;
-    });
-  }, [category]);
 
   return (
-    <div ref={fieldsRef} className="space-y-3">
+    <div className="space-y-3">
       <input type="hidden" name="industry_category_required" value="true" />
       <div>
         <label
           htmlFor="industry_category"
           className="block text-sm font-medium text-slate-700"
         >
-          業界カテゴリ
+          業界カテゴリ *
         </label>
         <select
           id="industry_category"
           name="industry_category"
           required
+          aria-describedby="industry-category-help"
           value={category}
           onChange={(event) => setCategory(event.target.value)}
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+          className="ui-field"
         >
           <option value="">選択してください</option>
           {INDUSTRY_CATEGORIES.map((option) => (
@@ -54,11 +43,9 @@ export function IndustryFields({
             </option>
           ))}
         </select>
-        {!category && (
-          <p className="mt-1 text-sm text-red-600">
-            業界カテゴリを選択してください。もう一度入力してください。
-          </p>
-        )}
+        <p id="industry-category-help" className="mt-1 text-sm text-slate-600">
+          該当する業界がない場合は「その他」を選択してください。
+        </p>
       </div>
 
       <div className={category === INDUSTRY_CATEGORY_OTHER ? "" : "hidden"}>
@@ -76,7 +63,7 @@ export function IndustryFields({
           disabled={category !== INDUSTRY_CATEGORY_OTHER}
           defaultValue={initialOther}
           placeholder="例: エンタメ"
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+          className="ui-field"
         />
       </div>
     </div>

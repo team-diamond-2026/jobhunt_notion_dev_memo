@@ -48,23 +48,15 @@ export default async function EsDetailPage({ params, searchParams }: PageProps) 
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <nav className="border-b bg-white">
-        <div className="mx-auto flex min-h-16 max-w-4xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <Link href="/es" className="text-sm font-medium text-blue-600 hover:underline">← ES一覧</Link>
-          <div className="flex items-center gap-3">
-            <Link href={`/es?company=${company.id}`} className="text-sm text-blue-600 hover:underline">{company.company_name}のES</Link>
-            <Link href={`/es/${id}/edit`} className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">編集</Link>
-          </div>
-        </div>
-      </nav>
+    <div className="ui-workspace">
+      <div className="ui-toolbar ui-toolbar-narrow"><Link href="/es" className="ui-link">← ES一覧へ戻る</Link><div><Link href={`/es?company=${company.id}`} className="ui-link">{company.company_name}のES</Link><Link href={`/es/${id}/edit`} className="ui-button ui-primary">編集</Link></div></div>
 
-      <main className="mx-auto max-w-4xl space-y-5 px-3 py-6 sm:px-4 sm:py-8">
-        {query.saved === "created" ? <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900" role="status">ESを作成しました。現在のバージョンは v{document.version} です。</div> : null}
-        {query.saved === "updated" ? <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900" role="status">ESを更新しました。現在のバージョンは v{document.version} です。</div> : null}
-        {query.error ? <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900" role="alert">{query.error}</div> : null}
+      <main id="main-content" className="ui-main ui-main-narrow space-y-6">
+        {query.saved === "created" ? <div className="ui-feedback ui-feedback-success" role="status">ESを作成しました。現在のバージョンは v{document.version} です。</div> : null}
+        {query.saved === "updated" ? <div className="ui-feedback ui-feedback-success" role="status">ESを更新しました。現在のバージョンは v{document.version} です。</div> : null}
+        {query.error ? <div className="ui-feedback ui-feedback-error" role="alert">{query.error}</div> : null}
 
-        <article className="rounded-xl bg-white p-5 shadow sm:p-8">
+        <article className="ui-panel">
           <header className="border-b border-slate-200 pb-5">
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <span className="rounded-full bg-blue-50 px-3 py-1 font-medium text-blue-700">{getEsDocumentTypeLabel(document.doc_type)}</span>
@@ -79,7 +71,7 @@ export default async function EsDetailPage({ params, searchParams }: PageProps) 
           </div>
         </article>
 
-        <section className="rounded-xl bg-white p-5 shadow sm:p-6" aria-labelledby="es-update-info">
+        <section className="ui-panel" aria-labelledby="es-update-info">
           <h2 id="es-update-info" className="font-bold text-slate-950">更新情報</h2>
           <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-3">
             <div>
@@ -100,12 +92,12 @@ export default async function EsDetailPage({ params, searchParams }: PageProps) 
           </p>
         </section>
 
-        <section className="rounded-xl border border-rose-200 bg-white p-5 shadow-sm">
+        <section className="ui-panel border border-rose-200">
           <h2 className="font-bold text-slate-950">このESを削除</h2>
           <p className="mt-1 text-sm text-slate-600">削除した内容は元に戻せません。</p>
           <form action={deleteEsDocument} className="mt-4">
             <input type="hidden" name="document_id" value={document.id} />
-            <button type="submit" className="rounded-md bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700">ESを削除</button>
+            <button type="submit" className="ui-button ui-danger">ESを削除</button>
           </form>
         </section>
       </main>

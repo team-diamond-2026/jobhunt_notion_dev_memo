@@ -35,6 +35,12 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
+## UI checks
+
+Run `npm test` for component and interaction tests, `npm run lint` for lint checks,
+and `npm run build` for the production build. See [画面設計](../docs/05_画面設計.md)
+for responsive layout and theme checks.
+
 ## 選考ボードの検証
 
 `npm test` で、ステータス更新の認証・所有者制限・入力検証と、ボードの移動・保存失敗時の復元を検証できます。Supabaseへの接続はモックされるため、テストで実際の企業情報は変更しません。

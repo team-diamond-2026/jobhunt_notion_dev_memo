@@ -53,7 +53,7 @@ export default async function EditEventPage({ params, searchParams }: PageProps)
         </div>
       </nav>
 
-      <main className="mx-auto max-w-3xl space-y-5 px-3 py-6 sm:px-4 sm:py-8">
+      <main id="main-content" className="mx-auto max-w-3xl space-y-5 px-3 py-6 sm:px-4 sm:py-8">
         <section className="rounded-xl bg-white p-5 shadow sm:p-7">
           <EventForm
             action={updateEvent}
