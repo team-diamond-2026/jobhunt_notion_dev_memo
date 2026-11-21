@@ -92,6 +92,7 @@ export async function createCompany(formData: FormData) {
   }
 
   revalidatePath("/companies");
+  revalidatePath("/companies/board");
 }
 
 export async function deleteCompany(formData: FormData) {
@@ -122,6 +123,7 @@ export async function deleteCompany(formData: FormData) {
   }
 
   revalidatePath("/companies");
+  revalidatePath("/companies/board");
 }
 
 export async function updateCompany(formData: FormData) {
@@ -136,6 +138,7 @@ export async function updateCompany(formData: FormData) {
   }
 
   const companyId = String(formData.get("company_id") || "").trim();
+  const expectedUpdatedAt = String(formData.get("expected_updated_at") ?? "");
   const company_name = String(formData.get("company_name") || "").trim();
   const { category: industry_category, industry } = getIndustryValues(formData);
   const motivation_level = Number(formData.get("motivation_level") || 0);
@@ -158,7 +161,7 @@ export async function updateCompany(formData: FormData) {
 
   const { data: currentCompany, error: currentCompanyError } = await supabase
     .from("companies")
-    .select("selection_status")
+    .select("selection_status,updated_at")
     .eq("id", companyId)
     .eq("user_id", user.id)
     .single();
@@ -166,6 +169,11 @@ export async function updateCompany(formData: FormData) {
   if (currentCompanyError || !currentCompany) {
     throw new Error("更新対象の企業が見つかりません");
   }
+  const companyPath = `/companies/${companyId}`;
+  const conflictPath = formData.get("return_to") === "edit"
+    ? `${companyPath}/edit?error=conflict`
+    : `${companyPath}?error=conflict#company-update`;
+  if (currentCompany.updated_at !== expectedUpdatedAt) redirect(conflictPath);
 
   if (!canAdvanceSelectionStatus(currentCompany.selection_status, selection_status)) {
     throw new Error("選考状況を前の段階へ戻すことはできません");
@@ -173,7 +181,7 @@ export async function updateCompany(formData: FormData) {
 
   const safeMotivationLevel = Math.min(Math.max(motivation_level, 0), 5);
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("companies")
     .update({
       company_name,
@@ -182,17 +190,23 @@ export async function updateCompany(formData: FormData) {
       motivation_level: safeMotivationLevel,
       selection_status,
       memo: memo || null,
-      updated_at: new Date().toISOString(),
     })
     .eq("id", companyId)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .eq("selection_status", currentCompany.selection_status)
+    .eq("updated_at", currentCompany.updated_at)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     throw new Error(`企業更新に失敗しました: ${error.message}`);
   }
+  if (!data) redirect(conflictPath);
 
+  revalidatePath("/");
   revalidatePath("/companies");
-  revalidatePath(`/companies/${companyId}`);
   revalidatePath("/companies/board");
-  redirect(`/companies/${companyId}`);
+  revalidatePath(companyPath);
+  revalidatePath(`${companyPath}/edit`);
+  redirect(companyPath);
 }

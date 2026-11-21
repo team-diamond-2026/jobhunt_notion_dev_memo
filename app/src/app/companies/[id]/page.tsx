@@ -8,6 +8,7 @@ import { updateCompany } from "../actions";
 import {
   getSelectionStatusIndex,
   normalizeSelectionStatus,
+  SELECTION_CONFLICT_MESSAGE,
   SELECTION_STATUS_OPTIONS,
 } from "../../../lib/selection-status";
 
@@ -28,6 +29,7 @@ type PageProps = {
   params: Promise<{
     id: string;
   }>;
+  searchParams: Promise<{ error?: string }>;
 };
 
 function formatDateTime(value: string) {
@@ -41,8 +43,9 @@ function getProgressIndex(status: string) {
   return getSelectionStatusIndex(status);
 }
 
-export default async function CompanyDetailPage({ params }: PageProps) {
+export default async function CompanyDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { error: updateError } = await searchParams;
 
   const supabase = await createClient();
 
@@ -229,6 +232,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
             </section>
             <form id="company-update" action={updateCompany} className="scroll-mt-4 rounded-xl bg-white p-4 shadow sm:p-6">
               <input type="hidden" name="company_id" value={company.id} />
+              <input type="hidden" name="expected_updated_at" value={company.updated_at} />
               <input
                 type="hidden"
                 name="company_name"
@@ -243,6 +247,9 @@ export default async function CompanyDetailPage({ params }: PageProps) {
               <input type="hidden" name="industry_other" value="" />
 
               <h2 className="text-xl font-bold text-slate-950">詳細を更新</h2>
+              {updateError === "conflict" && (
+                <p role="alert" className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-800">{SELECTION_CONFLICT_MESSAGE}</p>
+              )}
 
               <div className="mt-5 space-y-4">
                 <div>
