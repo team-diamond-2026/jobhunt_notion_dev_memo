@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { EsDraftValues } from "@/lib/es";
 import {
   EsDocument,
   ES_DOCUMENT_TYPE_OPTIONS,
@@ -10,10 +11,12 @@ export type EsCompanyOption = {
 };
 
 type EsFormProps = {
-  action: (formData: FormData) => Promise<void>;
+  action: (formData: FormData) => void | Promise<void>;
   companies: EsCompanyOption[];
   defaultCompanyId?: string;
   document?: EsDocument;
+  initialValues?: EsDraftValues;
+  pending?: boolean;
   error?: string;
   submitLabel: string;
 };
@@ -23,6 +26,8 @@ export function EsForm({
   companies,
   defaultCompanyId,
   document,
+  initialValues,
+  pending = false,
   error,
   submitLabel,
 }: EsFormProps) {
@@ -47,7 +52,7 @@ export function EsForm({
             id="company_id"
             name="company_id"
             required
-            defaultValue={document?.company_id ?? defaultCompanyId ?? ""}
+            defaultValue={document?.company_id ?? initialValues?.company_id ?? defaultCompanyId ?? ""}
             className="ui-field"
           >
             <option value="" disabled>企業を選択</option>
@@ -67,7 +72,7 @@ export function EsForm({
             id="doc_type"
             name="doc_type"
             required
-            defaultValue={document?.doc_type ?? "entry_sheet"}
+            defaultValue={document?.doc_type ?? initialValues?.doc_type ?? "entry_sheet"}
             className="ui-field"
           >
             {ES_DOCUMENT_TYPE_OPTIONS.map((option) => (
@@ -89,7 +94,7 @@ export function EsForm({
           type="text"
           required
           maxLength={120}
-          defaultValue={document?.title ?? ""}
+          defaultValue={document?.title ?? initialValues?.title ?? ""}
           placeholder="例: 本選考 エントリーシート"
           className="ui-field"
         />
@@ -103,7 +108,7 @@ export function EsForm({
           id="content"
           name="content"
           rows={18}
-          defaultValue={document?.content ?? ""}
+          defaultValue={document?.content ?? initialValues?.content ?? ""}
           placeholder="設問、回答、推敲中のメモを入力"
           className="ui-field leading-7"
         />
@@ -117,8 +122,8 @@ export function EsForm({
         >
           キャンセル
         </Link>
-        <button type="submit" className="ui-button ui-primary">
-          {submitLabel}
+        <button type="submit" disabled={pending} className="ui-button ui-primary">
+          {pending ? "保存中…" : submitLabel}
         </button>
       </div>
     </form>

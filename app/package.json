@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run && node --test tests/*.test.mjs",
+    "test:e2e": "playwright test",
+    "test:es": "node --experimental-strip-types --test tests/es*.test.mjs",
+    "test:calendar": "node --experimental-strip-types --test tests/calendar*.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
@@ -17,6 +20,8 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16",
+    "@playwright/test": "^1.65.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/react": "^16.3.3",
     "@types/node": "^20",
@@ -24,7 +29,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
-    "jsdom": "^26.1.0",
+    "jsdom": "^27.4.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.12"

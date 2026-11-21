@@ -21,7 +21,8 @@ type Company = {
 
 type PageProps = {
   searchParams: Promise<{
-    keyword?: string;
+    keyword?: string | string[];
+    q?: string | string[];
     industry?: string;
     status?: string;
     sort?: string;
@@ -70,7 +71,8 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
   }
 
   const resolvedSearchParams = await searchParams;
-  const keyword = String(resolvedSearchParams.keyword ?? "").trim();
+  const searchKeyword = resolvedSearchParams.keyword ?? resolvedSearchParams.q;
+  const keyword = (Array.isArray(searchKeyword) ? searchKeyword[0] : searchKeyword)?.trim() ?? "";
   const industry = String(resolvedSearchParams.industry ?? "").trim();
   const status = String(resolvedSearchParams.status ?? "all").trim();
   const sort = String(resolvedSearchParams.sort ?? "updated_desc").trim();
@@ -125,7 +127,7 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
             <Link href="/companies/board" className="ui-button ui-secondary">選考ボードで見る</Link>
           </div>
 
-          <form method="get" role="search" aria-label="企業の検索と絞り込み" className="ui-search-form">
+          <form key={JSON.stringify([keyword, industry, status, sort])} action="/companies" method="get" role="search" aria-label="企業の検索と絞り込み" className="ui-search-form">
             <div>
               <label htmlFor="keyword" className="ui-label">企業名</label>
               <input id="keyword" name="keyword" type="search" defaultValue={keyword} placeholder="企業名で検索" className="ui-field" />
@@ -149,17 +151,17 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
             </div>
             <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-4">
               <button type="submit" className="ui-button ui-primary flex-1 sm:flex-none">検索する</button>
-              <Link href="/companies" className="ui-button ui-secondary flex-1 sm:flex-none">条件をクリア</Link>
+              <Link href="/companies" className="ui-button ui-secondary flex-1 sm:flex-none">リセット</Link>
             </div>
           </form>
 
           <p className="my-5 text-sm text-slate-600" role="status">
-            {hasFilters ? "条件に一致する企業" : "登録済み企業"}: <strong className="text-slate-950">{companies.length} 件</strong>
+            {keyword && <>「{keyword}」の</>}検索結果: {companies.length} 件
           </p>
           {companies.length === 0 ? (
             <div className="ui-empty-state rounded-xl bg-slate-50">
               <h3 className="text-lg font-semibold">{hasFilters ? "条件に一致する企業がありません" : "最初の企業を登録しましょう"}</h3>
-              <p className="mt-2 text-sm text-slate-600">{hasFilters ? "企業名の一部で検索するか、条件をクリアしてもう一度確認してください。" : "上の「企業を追加」を開くと、企業情報と選考状況を登録できます。"}</p>
+              <p className="mt-2 text-sm text-slate-600">{hasFilters ? "企業名の一部で検索するか、条件をクリアしてもう一度確認してください。" : "まだ企業が登録されていません。上の「企業を追加」を開いて登録できます。"}</p>
               {hasFilters && <Link href="/companies" className="ui-button ui-secondary mt-5">条件をクリアして全件表示</Link>}
             </div>
           ) : (

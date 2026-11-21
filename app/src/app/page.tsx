@@ -3,9 +3,14 @@ import { PageHeading } from "@/components/page-heading";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "../lib/supabase/server";
-import { SELECTION_STATUS_OPTIONS } from "../lib/selection-status";
+import { normalizeSelectionStatus, SELECTION_STATUS_OPTIONS } from "../lib/selection-status";
 import { UpcomingEvents } from "@/components/calendar/upcoming-events";
-import { CalendarEvent } from "@/lib/calendar";
+import {
+  CalendarEvent,
+  CALENDAR_EVENT_COLUMNS,
+  getUpcomingEventRange,
+  UPCOMING_EVENT_LIMIT,
+} from "@/lib/calendar";
 
 type Company = {
   id: string;
@@ -17,6 +22,12 @@ type Company = {
   memo: string | null;
   created_at: string;
   updated_at: string;
+};
+
+type Kpi = {
+  label: string;
+  value: number;
+  description: string;
 };
 
 export default async function Home() {
@@ -39,11 +50,20 @@ export default async function Home() {
     throw new Error(`企業データの取得に失敗しました: ${error.message}`);
   }
 
-  const companies = (data ?? []) as Company[];
+  const companies = ((data ?? []) as Company[]).map((company) => ({
+    ...company,
+    selection_status: normalizeSelectionStatus(company.selection_status),
+  }));
 
   const totalCompanies = companies.length;
   const notEnteredCount = companies.filter(
     (company) => company.selection_status === SELECTION_STATUS_OPTIONS[0],
+  ).length;
+  const appliedCount = companies.filter(
+    (company) => company.selection_status === "応募済み",
+  ).length;
+  const documentScreeningCount = companies.filter(
+    (company) => company.selection_status === "書類選考中",
   ).length;
   const interviewCount = companies.filter((company) =>
     ["一次面接", "二次面接", "最終面接"].includes(company.selection_status),
@@ -52,16 +72,48 @@ export default async function Home() {
     (company) => company.selection_status === "内定",
   ).length;
 
+  const kpis: Kpi[] = [
+    {
+      label: "登録企業数",
+      value: totalCompanies,
+      description: "登録されている企業の合計",
+    },
+    {
+      label: "未応募",
+      value: notEnteredCount,
+      description: "選考を開始していない企業",
+    },
+    {
+      label: "応募済み",
+      value: appliedCount,
+      description: "応募済みの企業",
+    },
+    {
+      label: "書類選考中",
+      value: documentScreeningCount,
+      description: "書類選考中の企業",
+    },
+    {
+      label: "面接中",
+      value: interviewCount,
+      description: "一次・二次・最終面接の企業",
+    },
+    {
+      label: "内定",
+      value: offerCount,
+      description: "内定ステータスの企業",
+    },
+  ];
+
   const recentCompanies = companies.slice(0, 5);
-  const now = new Date();
-  const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const upcomingRange = getUpcomingEventRange();
   const { data: eventData, error: eventError } = await supabase
     .from("events")
-    .select("id,title,event_type,start_at,end_at,related_company_id")
-    .gte("start_at", now.toISOString())
-    .lt("start_at", sevenDaysLater.toISOString())
+    .select(CALENDAR_EVENT_COLUMNS)
+    .gte("start_at", upcomingRange.startAt)
+    .lt("start_at", upcomingRange.endAtExclusive)
     .order("start_at", { ascending: true })
-    .limit(5);
+    .limit(UPCOMING_EVENT_LIMIT);
   const upcomingEvents = (eventData ?? []) as CalendarEvent[];
 
   return (
@@ -69,7 +121,7 @@ export default async function Home() {
       <main id="main-content" className="ui-main space-y-6">
         <PageHeading title="ダッシュボード" description="企業情報、選考状況、直近の予定を、ひとつの場所で確認できます。" />
         <section className="ui-panel">
-          <h2 className="text-xl sm:text-2xl font-bold text-black mb-3">
+          <h2 className="mb-3 text-xl font-bold text-black [overflow-wrap:anywhere] sm:text-2xl">
             ようこそ、{user.user_metadata?.display_name || user.email}さん
           </h2>
           <p className="text-slate-600">
@@ -89,6 +141,10 @@ export default async function Home() {
               className="ui-button ui-primary"
             >
               選考管理ボードを見る
+            </Link>
+
+            <Link href="/interviews" className="inline-flex min-h-11 items-center rounded-md bg-blue-600 px-5 py-2 text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-blue-600">
+              面接ログを見る
             </Link>
 
             <Link
@@ -114,26 +170,17 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-          <div className="ui-panel">
-            <p className="text-sm text-slate-500 mb-2">登録企業数</p>
-            <p className="text-3xl font-bold text-black">{totalCompanies}</p>
-          </div>
-
-          <div className="ui-panel">
-            <p className="text-sm text-slate-500 mb-2">未応募</p>
-            <p className="text-3xl font-bold text-black">{notEnteredCount}</p>
-          </div>
-
-          <div className="ui-panel">
-            <p className="text-sm text-slate-500 mb-2">面接中</p>
-            <p className="text-3xl font-bold text-black">{interviewCount}</p>
-          </div>
-
-          <div className="ui-panel">
-            <p className="text-sm text-slate-500 mb-2">内定</p>
-            <p className="text-3xl font-bold text-black">{offerCount}</p>
-          </div>
+        <section
+          aria-label="選考進捗サマリー"
+          className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4"
+        >
+          {kpis.map((kpi) => (
+            <article key={kpi.label} className="ui-panel">
+              <p className="mb-2 text-sm text-slate-500">{kpi.label}</p>
+              <p className="text-3xl font-bold text-black">{kpi.value}</p>
+              <p className="mt-2 text-sm text-slate-600">{kpi.description}</p>
+            </article>
+          ))}
         </section>
 
         <UpcomingEvents events={upcomingEvents} hasError={Boolean(eventError)} />
@@ -159,12 +206,12 @@ export default async function Home() {
                     <div className="min-w-0">
                       <Link
                         href={`/companies/${company.id}`}
-                        className="font-semibold text-black hover:text-blue-600 hover:underline"
+                        className="font-semibold text-black [overflow-wrap:anywhere] hover:text-blue-600 hover:underline"
                       >
                         {company.company_name}
                       </Link>
 
-                      <p className="text-sm text-slate-600 mt-1">
+                      <p className="text-sm text-slate-600 mt-1 [overflow-wrap:anywhere]">
                         業界: {company.industry || "未設定"}
                       </p>
                     </div>
@@ -182,7 +229,7 @@ export default async function Home() {
             <dl className="space-y-4">
               <div>
                 <dt className="text-sm text-slate-500">メールアドレス</dt>
-                <dd className="text-black">{user.email}</dd>
+                <dd className="text-black [overflow-wrap:anywhere]">{user.email}</dd>
               </div>
 
               <div>

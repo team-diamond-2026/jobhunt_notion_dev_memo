@@ -1,19 +1,16 @@
 import { PageHeading } from "@/components/page-heading";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { EsForm } from "@/components/es/es-form";
+import { EditEsForm } from "@/components/es/edit-es-form";
 import { EsDocument } from "@/lib/es";
 import { createClient } from "@/lib/supabase/server";
-import { updateEsDocument } from "../../actions";
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
 };
 
-export default async function EsEditPage({ params, searchParams }: PageProps) {
+export default async function EsEditPage({ params }: PageProps) {
   const { id } = await params;
-  const query = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -47,7 +44,7 @@ export default async function EsEditPage({ params, searchParams }: PageProps) {
       <main id="main-content" className="ui-main ui-main-narrow space-y-6">
         <PageHeading title="ESを編集" description="内容を更新して、最新の下書きを保存しましょう。" />
         <section className="ui-panel">
-          <EsForm action={updateEsDocument} companies={companies ?? []} document={document as EsDocument} error={query.error} submitLabel="変更を保存" />
+          <EditEsForm companies={companies ?? []} document={document as EsDocument} />
         </section>
       </main>
     </div>

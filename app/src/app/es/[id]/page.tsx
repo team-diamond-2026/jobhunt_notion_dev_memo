@@ -80,15 +80,15 @@ export default async function EsDetailPage({ params, searchParams }: PageProps) 
             </div>
             <div>
               <dt className="text-slate-500">作成日時</dt>
-              <dd className="mt-1 font-semibold text-slate-950">{formatEsUpdatedAt(document.created_at)}</dd>
+              <dd className="mt-1 font-semibold text-slate-950"><time dateTime={document.created_at}>{formatEsUpdatedAt(document.created_at)}</time></dd>
             </div>
             <div>
               <dt className="text-slate-500">最終更新日時</dt>
-              <dd className="mt-1 font-semibold text-slate-950">{formatEsUpdatedAt(document.updated_at)}</dd>
+              <dd className="mt-1 font-semibold text-slate-950"><time dateTime={document.updated_at}>{formatEsUpdatedAt(document.updated_at)}</time></dd>
             </div>
           </dl>
           <p className="mt-4 border-t border-slate-100 pt-4 text-xs leading-5 text-slate-500">
-            編集して保存するたびにバージョンが1つ上がります。MVPでは過去バージョンの本文は保持しません。
+            日時は日本時間です。編集して保存するたびにバージョンが1つ上がります。同じ秒の保存もバージョンで区別できます。MVPでは過去バージョンの本文は保持しません。
           </p>
         </section>
 

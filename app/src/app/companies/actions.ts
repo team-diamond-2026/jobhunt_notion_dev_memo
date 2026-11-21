@@ -193,5 +193,6 @@ export async function updateCompany(formData: FormData) {
 
   revalidatePath("/companies");
   revalidatePath(`/companies/${companyId}`);
+  revalidatePath("/companies/board");
   redirect(`/companies/${companyId}`);
 }

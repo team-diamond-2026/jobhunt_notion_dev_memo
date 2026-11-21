@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import type { ComponentProps } from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -14,6 +16,8 @@ describe("共通ナビゲーション", () => {
     ["/companies", "企業一覧"],
     ["/companies/company-1/edit", "企業一覧"],
     ["/companies/board", "選考ボード"],
+    ["/interviews", "面接ログ"],
+    ["/interviews/interview-1/edit", "面接ログ"],
     ["/calendar", "カレンダー"],
     ["/calendar/events/new", "カレンダー"],
     ["/calendar/events/event-1/edit", "カレンダー"],

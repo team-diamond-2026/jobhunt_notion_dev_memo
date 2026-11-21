@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import { Suspense, use, useState, type ComponentProps, type ReactNode } from "react";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ErrorBoundaryHandler } from "next/dist/client/components/error-boundary";
