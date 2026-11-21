@@ -8,6 +8,7 @@ import { updateCompany } from "../actions";
 import {
   getSelectionStatusIndex,
   normalizeSelectionStatus,
+  SELECTION_CONFLICT_MESSAGE,
   SELECTION_STATUS_OPTIONS,
 } from "../../../lib/selection-status";
 
@@ -28,6 +29,7 @@ type PageProps = {
   params: Promise<{
     id: string;
   }>;
+  searchParams: Promise<{ error?: string }>;
 };
 
 function formatDateTime(value: string) {
@@ -41,8 +43,9 @@ function getProgressIndex(status: string) {
   return getSelectionStatusIndex(status);
 }
 
-export default async function CompanyDetailPage({ params }: PageProps) {
+export default async function CompanyDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { error: updateError } = await searchParams;
 
   const supabase = await createClient();
 
@@ -71,35 +74,13 @@ export default async function CompanyDetailPage({ params }: PageProps) {
   const motivationLevel = Math.min(Math.max(company.motivation_level, 0), 5);
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <nav className="border-b bg-white">
-        <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <Link href="/companies" className="inline-flex min-h-11 items-center text-blue-600 hover:underline">
-            企業一覧へ戻る
-          </Link>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Link href="/companies/board" className="inline-flex min-h-11 items-center text-sm text-blue-600 hover:underline">選考ボードへ戻る</Link>
-            <Link
-              href={`/companies/${company.id}/edit`}
-              className="inline-flex min-h-11 items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              詳細編集
-            </Link>
-
-            <form action="/logout" method="post">
-              <button
-                type="submit"
-                className="min-h-11 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-              >
-                ログアウト
-              </button>
-            </form>
-          </div>
-        </div>
-      </nav>
-
-      <main className="mx-auto max-w-6xl px-3 py-5 [overflow-wrap:anywhere] sm:px-4 sm:py-8">
+    <div className="ui-workspace">
+      <main id="main-content" className="ui-main [overflow-wrap:anywhere]">
+        <nav aria-label="企業詳細の操作" className="mb-5 flex flex-wrap gap-2">
+          <Link href="/companies" className="ui-button ui-secondary">企業一覧へ戻る</Link>
+          <Link href="/companies/board" className="ui-button ui-secondary">選考ボードへ戻る</Link>
+          <Link href={`/companies/${company.id}/edit`} className="ui-button ui-primary">詳細編集</Link>
+        </nav>
         <header className="mb-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="min-w-0">
@@ -125,7 +106,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
 
         <div className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
           <section className="min-w-0 space-y-6">
-            <div className="rounded-xl bg-white p-6 shadow">
+            <div className="ui-panel">
               <h2 className="text-xl font-bold text-slate-950">基本情報</h2>
 
               <dl className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -159,7 +140,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
               </dl>
             </div>
 
-            <div className="rounded-xl bg-white p-6 shadow">
+            <div className="ui-panel">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <h2 className="text-xl font-bold text-slate-950">
                   選考履歴・現在地
@@ -208,7 +189,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
               </ol>
             </div>
 
-            <div className="rounded-xl bg-white p-6 shadow">
+            <div className="ui-panel">
               <h2 className="text-xl font-bold text-slate-950">メモ</h2>
               <div className="mt-4 min-h-32 rounded-lg border border-slate-200 bg-slate-50 p-4">
                 <p className="whitespace-pre-wrap text-slate-800">
@@ -229,6 +210,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
             </section>
             <form id="company-update" action={updateCompany} className="scroll-mt-4 rounded-xl bg-white p-4 shadow sm:p-6">
               <input type="hidden" name="company_id" value={company.id} />
+              <input type="hidden" name="expected_updated_at" value={company.updated_at} />
               <input
                 type="hidden"
                 name="company_name"
@@ -243,6 +225,9 @@ export default async function CompanyDetailPage({ params }: PageProps) {
               <input type="hidden" name="industry_other" value="" />
 
               <h2 className="text-xl font-bold text-slate-950">詳細を更新</h2>
+              {updateError === "conflict" && (
+                <p role="alert" className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-800">{SELECTION_CONFLICT_MESSAGE}</p>
+              )}
 
               <div className="mt-5 space-y-4">
                 <div>
@@ -317,7 +302,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
               </div>
             </form>
 
-            <div className="rounded-xl bg-white p-6 shadow">
+            <div className="ui-panel">
               <h2 className="text-xl font-bold text-slate-950">関連導線</h2>
               <div className="mt-4 grid gap-3">
                 <Link

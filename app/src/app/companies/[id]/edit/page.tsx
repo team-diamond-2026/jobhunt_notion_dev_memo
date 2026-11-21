@@ -7,6 +7,8 @@ import { getIndustryFormValues } from "../../industry";
 import { IndustryFields } from "../../industry-fields";
 import {
   getSelectionStatusIndex,
+  normalizeSelectionStatus,
+  SELECTION_CONFLICT_MESSAGE,
   SELECTION_STATUS_OPTIONS,
 } from "../../../../lib/selection-status";
 
@@ -27,10 +29,12 @@ type PageProps = {
   params: Promise<{
     id: string;
   }>;
+  searchParams: Promise<{ error?: string }>;
 };
 
-export default async function CompanyEditPage({ params }: PageProps) {
+export default async function CompanyEditPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { error: updateError } = await searchParams;
 
   const supabase = await createClient();
 
@@ -71,6 +75,11 @@ export default async function CompanyEditPage({ params }: PageProps) {
 
           <form action={updateCompany} className="grid gap-4">
             <input type="hidden" name="company_id" value={company.id} />
+            <input type="hidden" name="expected_updated_at" value={company.updated_at} />
+            <input type="hidden" name="return_to" value="edit" />
+            {updateError === "conflict" && (
+              <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">{SELECTION_CONFLICT_MESSAGE}</p>
+            )}
 
             <div>
               <label htmlFor="company_name" className="ui-label">企業名 *</label>
@@ -111,7 +120,7 @@ export default async function CompanyEditPage({ params }: PageProps) {
               <select
                 id="selection_status"
                 name="selection_status"
-                defaultValue={company.selection_status}
+                defaultValue={normalizeSelectionStatus(company.selection_status)}
                 className="ui-field"
               >
                 {SELECTION_STATUS_OPTIONS.map((status, index) => (

@@ -154,6 +154,7 @@ test("real migrations, ES actions and rendered list/detail agree after saves", a
       notFound: () => { throw new Error("not-found"); },
     },
     "next/link": { default: ({ children, ...props }) => React.createElement("a", props, children) },
+    "@/components/page-heading": { PageHeading: ({ title, description }) => React.createElement("header", null, title, description) },
     "react/jsx-runtime": jsxRuntime,
     react: React,
     "@/lib/es-templates": templates,

@@ -74,7 +74,7 @@ export default async function NewEsPage({ searchParams }: PageProps) {
             {params.template ? <p role="alert" className="mt-3 text-sm text-rose-700">指定されたテンプレートはありません。以下から選び直してください。</p> : null}
             <div className="mt-5 grid gap-4 sm:grid-cols-3">
               {ES_TEMPLATES.map((item) => (
-              <Link key={item.id} href={createUrl(item.id)} className="rounded-lg border border-slate-300 p-4 hover:border-blue-500 hover:bg-blue-50">
+                <Link key={item.id} href={createUrl(item.id)} className="rounded-lg border border-slate-300 p-4 hover:border-blue-500 hover:bg-blue-50">
                   <h3 className="font-bold text-slate-950">{item.name}</h3>
                   <p className="mt-2 text-sm leading-6 text-slate-600">{item.description}</p>
                   <span className="mt-3 block text-sm font-medium text-blue-600">このテンプレートを使う →</span>
