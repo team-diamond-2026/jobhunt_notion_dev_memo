@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "../lib/supabase/server";
-import { SELECTION_STATUS_OPTIONS } from "../lib/selection-status";
+import { normalizeSelectionStatus, SELECTION_STATUS_OPTIONS } from "../lib/selection-status";
 import { UpcomingEvents } from "@/components/calendar/upcoming-events";
 import {
   CalendarEvent,
@@ -20,6 +20,12 @@ type Company = {
   memo: string | null;
   created_at: string;
   updated_at: string;
+};
+
+type Kpi = {
+  label: string;
+  value: number;
+  description: string;
 };
 
 export default async function Home() {
@@ -42,11 +48,20 @@ export default async function Home() {
     throw new Error(`企業データの取得に失敗しました: ${error.message}`);
   }
 
-  const companies = (data ?? []) as Company[];
+  const companies = ((data ?? []) as Company[]).map((company) => ({
+    ...company,
+    selection_status: normalizeSelectionStatus(company.selection_status),
+  }));
 
   const totalCompanies = companies.length;
   const notEnteredCount = companies.filter(
     (company) => company.selection_status === SELECTION_STATUS_OPTIONS[0],
+  ).length;
+  const appliedCount = companies.filter(
+    (company) => company.selection_status === "応募済み",
+  ).length;
+  const documentScreeningCount = companies.filter(
+    (company) => company.selection_status === "書類選考中",
   ).length;
   const interviewCount = companies.filter((company) =>
     ["一次面接", "二次面接", "最終面接"].includes(company.selection_status),
@@ -54,6 +69,39 @@ export default async function Home() {
   const offerCount = companies.filter(
     (company) => company.selection_status === "内定",
   ).length;
+
+  const kpis: Kpi[] = [
+    {
+      label: "登録企業数",
+      value: totalCompanies,
+      description: "登録されている企業の合計",
+    },
+    {
+      label: "未応募",
+      value: notEnteredCount,
+      description: "選考を開始していない企業",
+    },
+    {
+      label: "応募済み",
+      value: appliedCount,
+      description: "応募済みの企業",
+    },
+    {
+      label: "書類選考中",
+      value: documentScreeningCount,
+      description: "書類選考中の企業",
+    },
+    {
+      label: "面接中",
+      value: interviewCount,
+      description: "一次・二次・最終面接の企業",
+    },
+    {
+      label: "内定",
+      value: offerCount,
+      description: "内定ステータスの企業",
+    },
+  ];
 
   const recentCompanies = companies.slice(0, 5);
   const upcomingRange = getUpcomingEventRange();
@@ -144,26 +192,17 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-          <div className="bg-white rounded-xl shadow p-6">
-            <p className="text-sm text-slate-500 mb-2">登録企業数</p>
-            <p className="text-3xl font-bold text-black">{totalCompanies}</p>
-          </div>
-
-          <div className="bg-white rounded-xl shadow p-6">
-            <p className="text-sm text-slate-500 mb-2">未応募</p>
-            <p className="text-3xl font-bold text-black">{notEnteredCount}</p>
-          </div>
-
-          <div className="bg-white rounded-xl shadow p-6">
-            <p className="text-sm text-slate-500 mb-2">面接中</p>
-            <p className="text-3xl font-bold text-black">{interviewCount}</p>
-          </div>
-
-          <div className="bg-white rounded-xl shadow p-6">
-            <p className="text-sm text-slate-500 mb-2">内定</p>
-            <p className="text-3xl font-bold text-black">{offerCount}</p>
-          </div>
+        <section
+          aria-label="選考進捗サマリー"
+          className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4"
+        >
+          {kpis.map((kpi) => (
+            <article key={kpi.label} className="rounded-xl bg-white p-6 shadow">
+              <p className="mb-2 text-sm text-slate-500">{kpi.label}</p>
+              <p className="text-3xl font-bold text-black">{kpi.value}</p>
+              <p className="mt-2 text-sm text-slate-600">{kpi.description}</p>
+            </article>
+          ))}
         </section>
 
         <UpcomingEvents events={upcomingEvents} hasError={Boolean(eventError)} />
