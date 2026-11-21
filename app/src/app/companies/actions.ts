@@ -12,7 +12,10 @@ import {
   isSelectionStatus,
   SELECTION_STATUS_OPTIONS,
 } from "../../lib/selection-status";
-import { normalizeTaskPriority } from "../../lib/task";
+import {
+  deadlineDateKeyToIso,
+  normalizeTaskPriority,
+} from "../../lib/task";
 
 function getIndustryValues(formData: FormData) {
   const category = String(formData.get("industry_category") || "").trim();
@@ -64,13 +67,15 @@ function getDeadlineValues(formData: FormData) {
     throw new Error("締切タスク名と締切日はセットで入力してください");
   }
 
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+  const dueDate = deadlineDateKeyToIso(date);
+
+  if (!dueDate) {
     throw new Error("締切日の形式が正しくありません");
   }
 
   return {
     title,
-    due_date: `${date}T23:59:59+09:00`,
+    due_date: dueDate,
     priority,
   };
 }
@@ -121,56 +126,36 @@ export async function createCompany(formData: FormData) {
     throw new Error("Workspaceが見つからないため、企業を登録できません");
   }
 
-  const { data: createdCompany, error } = await supabase
-    .from("companies")
-    .insert({
+  const companyValues = {
     user_id: user.id,
-    workspace_id: workspace?.id ?? null,
+    workspace_id: workspace.id,
     company_name,
     industry_category,
     industry: industry || null,
     motivation_level: safeMotivationLevel,
     selection_status,
     memo: memo || null,
-    })
-    .select("id, workspace_id")
-    .single();
+  };
+
+  const { error } = deadline
+    ? await supabase.rpc("create_company_with_deadline", {
+        p_company_name: companyValues.company_name,
+        p_industry_category: companyValues.industry_category,
+        p_industry: companyValues.industry,
+        p_motivation_level: companyValues.motivation_level,
+        p_selection_status: companyValues.selection_status,
+        p_memo: companyValues.memo,
+        p_deadline_title: deadline.title,
+        p_deadline_due_date: deadline.due_date,
+        p_deadline_priority: deadline.priority,
+      })
+    : await supabase.from("companies").insert(companyValues);
 
   if (error) {
     throw new Error(`企業登録に失敗しました: ${error.message}`);
   }
 
-  if (deadline) {
-    if (!createdCompany?.workspace_id) {
-      throw new Error("Workspaceが設定されていないため、締切を登録できません");
-    }
-
-    const { error: taskError } = await supabase.from("tasks").insert({
-      workspace_id: createdCompany.workspace_id,
-      title: deadline.title,
-      due_date: deadline.due_date,
-      priority: deadline.priority,
-      status: "todo",
-      related_company_id: createdCompany.id,
-    });
-
-    if (taskError) {
-      const { error: rollbackError } = await supabase
-        .from("companies")
-        .delete()
-        .eq("id", createdCompany.id)
-        .eq("user_id", user.id);
-
-      if (rollbackError) {
-        throw new Error(
-          `締切タスクの登録に失敗しました。企業の取り消しにも失敗しました: ${taskError.message}`,
-        );
-      }
-
-      throw new Error(`締切タスクの登録に失敗しました: ${taskError.message}`);
-    }
-  }
-
+  revalidatePath("/");
   revalidatePath("/companies");
 }
 
@@ -201,6 +186,7 @@ export async function deleteCompany(formData: FormData) {
     throw new Error(`企業削除に失敗しました: ${error.message}`);
   }
 
+  revalidatePath("/");
   revalidatePath("/companies");
 }
 
@@ -216,6 +202,7 @@ export async function updateCompany(formData: FormData) {
   }
 
   const companyId = String(formData.get("company_id") || "").trim();
+  const expectedUpdatedAt = String(formData.get("expected_updated_at") ?? "");
   const company_name = String(formData.get("company_name") || "").trim();
   const { category: industry_category, industry } = getIndustryValues(formData);
   const motivation_level = Number(formData.get("motivation_level") || 0);
@@ -239,7 +226,7 @@ export async function updateCompany(formData: FormData) {
 
   const { data: currentCompany, error: currentCompanyError } = await supabase
     .from("companies")
-    .select("company_name, industry_category, industry, motivation_level, selection_status, memo, workspace_id")
+    .select("selection_status,updated_at")
     .eq("id", companyId)
     .eq("user_id", user.id)
     .single();
@@ -248,78 +235,73 @@ export async function updateCompany(formData: FormData) {
     throw new Error("更新対象の企業が見つかりません");
   }
 
+  const companyPath = `/companies/${companyId}`;
+  const conflictPath = formData.get("return_to") === "edit"
+    ? `${companyPath}/edit?error=conflict`
+    : `${companyPath}?error=conflict#company-update`;
+  if (currentCompany.updated_at !== expectedUpdatedAt) {
+    redirect(conflictPath);
+  }
+
   if (!canAdvanceSelectionStatus(currentCompany.selection_status, selection_status)) {
     throw new Error("選考状況を前の段階へ戻すことはできません");
   }
 
   const safeMotivationLevel = Math.min(Math.max(motivation_level, 0), 5);
 
-  const { error } = await supabase
-    .from("companies")
-    .update({
-      company_name,
-      industry_category,
-      industry: industry || null,
-      motivation_level: safeMotivationLevel,
-      selection_status,
-      memo: memo || null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", companyId)
-    .eq("user_id", user.id);
-
-  if (error) {
-    throw new Error(`企業更新に失敗しました: ${error.message}`);
-  }
-
   if (deadline) {
-    const { data: existingTask, error: taskLookupError } = await supabase
-      .from("tasks")
+    const { data, error } = await supabase.rpc("update_company_with_deadline", {
+      p_company_id: companyId,
+      p_expected_updated_at: expectedUpdatedAt,
+      p_current_selection_status: currentCompany.selection_status,
+      p_company_name: company_name,
+      p_industry_category: industry_category,
+      p_industry: industry || null,
+      p_motivation_level: safeMotivationLevel,
+      p_selection_status: selection_status,
+      p_memo: memo || null,
+      p_deadline_title: deadline.title,
+      p_deadline_due_date: deadline.due_date,
+      p_deadline_priority: deadline.priority,
+    });
+
+    if (error) {
+      throw new Error(`企業と締切タスクの更新に失敗しました: ${error.message}`);
+    }
+
+    if (!data) {
+      redirect(conflictPath);
+    }
+  } else {
+    const { data, error } = await supabase
+      .from("companies")
+      .update({
+        company_name,
+        industry_category,
+        industry: industry || null,
+        motivation_level: safeMotivationLevel,
+        selection_status,
+        memo: memo || null,
+      })
+      .eq("id", companyId)
+      .eq("user_id", user.id)
+      .eq("selection_status", currentCompany.selection_status)
+      .eq("updated_at", currentCompany.updated_at)
       .select("id")
-      .eq("related_company_id", companyId)
-      .order("due_date", { ascending: true })
-      .limit(1)
       .maybeSingle();
 
-    if (taskLookupError) {
-      throw new Error(`既存の締切タスク取得に失敗しました: ${taskLookupError.message}`);
+    if (error) {
+      throw new Error(`企業更新に失敗しました: ${error.message}`);
     }
-
-    const taskData = {
-      title: deadline.title,
-      due_date: deadline.due_date,
-      priority: deadline.priority,
-      status: "todo",
-      related_company_id: companyId,
-    };
-
-    const taskResult = existingTask
-      ? await supabase.from("tasks").update(taskData).eq("id", existingTask.id)
-      : await supabase.from("tasks").insert({
-          ...taskData,
-          workspace_id: currentCompany.workspace_id,
-        });
-
-    if (taskResult.error) {
-      await supabase
-        .from("companies")
-        .update({
-          company_name: currentCompany.company_name,
-          industry_category: currentCompany.industry_category,
-          industry: currentCompany.industry,
-          motivation_level: currentCompany.motivation_level,
-          selection_status: currentCompany.selection_status,
-          memo: currentCompany.memo,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", companyId)
-        .eq("user_id", user.id);
-
-      throw new Error(`締切タスクの保存に失敗しました: ${taskResult.error.message}`);
+    if (!data) {
+      redirect(conflictPath);
     }
   }
 
+  revalidatePath("/");
   revalidatePath("/companies");
-  revalidatePath(`/companies/${companyId}`);
+  revalidatePath(companyPath);
+  revalidatePath(`${companyPath}/edit`);
+  revalidatePath("/companies/board");
   redirect(`/companies/${companyId}`);
 }

@@ -6,13 +6,18 @@ import { getIndustryFormValues } from "../../industry";
 import { IndustryFields } from "../../industry-fields";
 import {
   getSelectionStatusIndex,
+  normalizeSelectionStatus,
   SELECTION_STATUS_OPTIONS,
 } from "../../../../lib/selection-status";
-import { normalizeTaskPriority } from "../../../../lib/task";
+import {
+  deadlineDateInputValue,
+  normalizeTaskPriority,
+} from "../../../../lib/task";
 
 type Company = {
   id: string;
   user_id: string;
+  workspace_id: string;
   company_name: string;
   industry: string | null;
   industry_category: string | null;
@@ -33,10 +38,12 @@ type PageProps = {
   params: Promise<{
     id: string;
   }>;
+  searchParams: Promise<{ error?: string }>;
 };
 
-export default async function CompanyEditPage({ params }: PageProps) {
+export default async function CompanyEditPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { error: updateError } = await searchParams;
 
   const supabase = await createClient();
 
@@ -59,12 +66,19 @@ export default async function CompanyEditPage({ params }: PageProps) {
     notFound();
   }
 
-  const company = data as Company;
+  const company = {
+    ...data,
+    selection_status: normalizeSelectionStatus(data.selection_status),
+  } as Company;
   const { data: deadlineTask, error: deadlineTaskError } = await supabase
     .from("tasks")
     .select("title, due_date, priority")
     .eq("related_company_id", company.id)
+    .eq("workspace_id", company.workspace_id)
+    .in("status", ["todo", "doing"])
+    .not("due_date", "is", null)
     .order("due_date", { ascending: true })
+    .order("id", { ascending: true })
     .limit(1)
     .maybeSingle();
 
@@ -114,6 +128,13 @@ export default async function CompanyEditPage({ params }: PageProps) {
 
           <form action={updateCompany} className="grid gap-4">
             <input type="hidden" name="company_id" value={company.id} />
+            <input type="hidden" name="expected_updated_at" value={company.updated_at} />
+            <input type="hidden" name="return_to" value="edit" />
+            {updateError === "conflict" && (
+              <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
+                別の画面で企業情報が更新されたため保存できませんでした。最新の内容を確認してください。
+              </p>
+            )}
 
             <div>
               <label className="block text-black mb-1">企業名 *</label>
@@ -188,9 +209,9 @@ export default async function CompanyEditPage({ params }: PageProps) {
                 id="deadline_date"
                 name="deadline_date"
                 type="date"
-                defaultValue={
-                  (deadlineTask as DeadlineTask | null)?.due_date?.slice(0, 10) ?? ""
-                }
+                defaultValue={deadlineDateInputValue(
+                  (deadlineTask as DeadlineTask | null)?.due_date,
+                )}
                 className="w-full border text-black px-3 py-2"
               />
             </div>
