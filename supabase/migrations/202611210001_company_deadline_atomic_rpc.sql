@@ -25,20 +25,8 @@ begin
     raise exception 'authentication required' using errcode = '42501';
   end if;
 
-  select workspaces.id
-    into company_workspace_id
-    from public.workspaces as workspaces
-   where workspaces.user_id = current_user_id
-   order by workspaces.created_at asc, workspaces.id asc
-   limit 1;
-
-  if company_workspace_id is null then
-    raise exception 'workspace not found' using errcode = 'P0002';
-  end if;
-
   insert into public.companies (
     user_id,
-    workspace_id,
     company_name,
     industry_category,
     industry,
@@ -48,7 +36,6 @@ begin
   )
   values (
     current_user_id,
-    company_workspace_id,
     p_company_name,
     p_industry_category,
     p_industry,
@@ -56,7 +43,7 @@ begin
     p_selection_status,
     p_memo
   )
-  returning id into created_company_id;
+  returning id, workspace_id into created_company_id, company_workspace_id;
 
   insert into public.tasks (
     workspace_id,
@@ -91,7 +78,9 @@ create or replace function public.update_company_with_deadline(
   p_memo text,
   p_deadline_title text,
   p_deadline_due_date timestamptz,
-  p_deadline_priority text
+  p_deadline_priority text,
+  p_deadline_task_id uuid,
+  p_deadline_task_updated_at timestamptz
 )
 returns uuid
 language plpgsql
@@ -102,6 +91,7 @@ declare
   current_user_id uuid := auth.uid();
   company_workspace_id uuid;
   deadline_task_id uuid;
+  deadline_task_updated_at timestamptz;
 begin
   if current_user_id is null then
     raise exception 'authentication required' using errcode = '42501';
@@ -130,8 +120,8 @@ begin
     return null;
   end if;
 
-  select tasks.id
-    into deadline_task_id
+  select tasks.id, tasks.updated_at
+    into deadline_task_id, deadline_task_updated_at
     from public.tasks as tasks
    where tasks.related_company_id = p_company_id
      and tasks.workspace_id = company_workspace_id
@@ -140,6 +130,11 @@ begin
    order by tasks.due_date asc, tasks.id asc
    limit 1
    for update;
+
+  if deadline_task_id is distinct from p_deadline_task_id
+     or deadline_task_updated_at is distinct from p_deadline_task_updated_at then
+    raise exception 'deadline task changed' using errcode = '40001';
+  end if;
 
   if deadline_task_id is null then
     insert into public.tasks (
@@ -161,7 +156,12 @@ begin
   else
     update public.tasks
        set title = p_deadline_title,
-           due_date = p_deadline_due_date,
+           due_date = case
+             when (due_date at time zone 'Asia/Tokyo')::date
+                = (p_deadline_due_date at time zone 'Asia/Tokyo')::date
+             then due_date
+             else p_deadline_due_date
+           end,
            priority = p_deadline_priority
      where id = deadline_task_id
        and workspace_id = company_workspace_id
@@ -176,12 +176,14 @@ revoke all on function public.create_company_with_deadline(
   text, text, text, integer, text, text, text, timestamptz, text
 ) from public, anon;
 revoke all on function public.update_company_with_deadline(
-  uuid, timestamptz, text, text, text, text, integer, text, text, text, timestamptz, text
+  uuid, timestamptz, text, text, text, text, integer, text, text, text, timestamptz, text,
+  uuid, timestamptz
 ) from public, anon;
 
 grant execute on function public.create_company_with_deadline(
   text, text, text, integer, text, text, text, timestamptz, text
 ) to authenticated;
 grant execute on function public.update_company_with_deadline(
-  uuid, timestamptz, text, text, text, text, integer, text, text, text, timestamptz, text
+  uuid, timestamptz, text, text, text, text, integer, text, text, text, timestamptz, text,
+  uuid, timestamptz
 ) to authenticated;

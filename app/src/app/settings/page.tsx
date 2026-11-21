@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PageHeading } from "@/components/page-heading";
 import { redirect } from "next/navigation";
 import { createClient } from "../../lib/supabase/server";
 import { saveSettings } from "./actions";
@@ -37,7 +37,7 @@ const DEFAULT_SETTINGS: UserSettings = {
 };
 
 const fieldClass =
-  "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-slate-950 shadow-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-200";
+  "ui-field";
 
 function isSettings(value: unknown): Partial<UserSettings> {
   return typeof value === "object" && value !== null ? (value as Partial<UserSettings>) : {};
@@ -107,60 +107,24 @@ export default async function SettingsPage({ searchParams }: PageProps) {
     userProfile.name || user.user_metadata?.display_name || user.email || "ユーザー";
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <nav className="border-b bg-white">
-        <div className="mx-auto flex min-h-16 max-w-7xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm text-slate-500">アカウント</p>
-            <h1 className="text-2xl font-bold text-slate-950">設定</h1>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Link href="/" className="text-sm font-medium text-blue-600 hover:underline">
-              ダッシュボード
-            </Link>
-            <Link
-              href="/companies"
-              className="rounded-md bg-slate-200 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-slate-300"
-            >
-              企業一覧
-            </Link>
-            <form action="/logout" method="post">
-              <button
-                type="submit"
-                className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-              >
-                ログアウト
-              </button>
-            </form>
-          </div>
-        </div>
-      </nav>
-
-      <main className="mx-auto max-w-5xl px-4 py-6 sm:py-8">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-slate-950 sm:text-3xl">
-            {displayName}さんの設定
-          </h2>
-          <p className="mt-2 text-sm text-slate-600">
-            プロフィール、通知、表示方法をまとめて管理できます。
-          </p>
-        </div>
+    <div className="ui-workspace">
+      <main id="main-content" className="ui-main ui-main-narrow space-y-6">
+        <PageHeading title="設定" description={`${displayName}さんのプロフィール、通知、表示方法を管理できます。`} />
 
         {resolvedSearchParams.saved === "1" ? (
-          <div className="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+          <div className="ui-feedback ui-feedback-success mb-6" role="status">
             設定を保存しました。
           </div>
         ) : null}
 
         {resolvedSearchParams.error === "profile" ? (
-          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          <div className="ui-feedback ui-feedback-error mb-6" role="alert">
             名前を入力してください。
           </div>
         ) : null}
 
         <form action={saveSettings} className="space-y-6">
-          <section className="rounded-lg bg-white p-5 shadow-sm sm:p-6">
+          <section className="ui-panel">
             <div className="border-b border-slate-200 pb-4">
               <h3 className="text-lg font-bold text-slate-950">プロフィール設定</h3>
               <p className="mt-1 text-sm text-slate-600">
@@ -202,7 +166,7 @@ export default async function SettingsPage({ searchParams }: PageProps) {
             </div>
           </section>
 
-          <section className="rounded-lg bg-white p-5 shadow-sm sm:p-6">
+          <section className="ui-panel">
             <div className="border-b border-slate-200 pb-4">
               <h3 className="text-lg font-bold text-slate-950">通知設定</h3>
               <p className="mt-1 text-sm text-slate-600">
@@ -252,7 +216,7 @@ export default async function SettingsPage({ searchParams }: PageProps) {
             </div>
           </section>
 
-          <section className="rounded-lg bg-white p-5 shadow-sm sm:p-6">
+          <section className="ui-panel">
             <div className="border-b border-slate-200 pb-4">
               <h3 className="text-lg font-bold text-slate-950">表示設定</h3>
               <p className="mt-1 text-sm text-slate-600">

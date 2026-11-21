@@ -8,12 +8,10 @@ import { updateCompany } from "../actions";
 import {
   getSelectionStatusIndex,
   normalizeSelectionStatus,
+  SELECTION_CONFLICT_MESSAGE,
   SELECTION_STATUS_OPTIONS,
 } from "../../../lib/selection-status";
-import {
-  deadlineDateInputValue,
-  normalizeTaskPriority,
-} from "../../../lib/task";
+import { DeadlineFields, type DeadlineTask } from "../deadline-fields";
 
 type Company = {
   id: string;
@@ -27,12 +25,6 @@ type Company = {
   memo: string | null;
   created_at: string;
   updated_at: string;
-};
-
-type DeadlineTask = {
-  title: string;
-  due_date: string;
-  priority: string;
 };
 
 type PageProps = {
@@ -84,7 +76,7 @@ export default async function CompanyDetailPage({ params, searchParams }: PagePr
   } as Company;
   const { data: deadlineTask, error: deadlineTaskError } = await supabase
     .from("tasks")
-    .select("title, due_date, priority")
+    .select("id, title, due_date, priority, updated_at")
     .eq("related_company_id", company.id)
     .eq("workspace_id", company.workspace_id)
     .in("status", ["todo", "doing"])
@@ -94,44 +86,19 @@ export default async function CompanyDetailPage({ params, searchParams }: PagePr
     .limit(1)
     .maybeSingle();
 
-  if (deadlineTaskError) {
-    throw new Error(`締切タスクの取得に失敗しました: ${deadlineTaskError.message}`);
-  }
 
   const interviewLogs = await getInterviewLogs(supabase, user.id, company.id);
   const progressIndex = getProgressIndex(company.selection_status);
   const motivationLevel = Math.min(Math.max(company.motivation_level, 0), 5);
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <nav className="border-b bg-white">
-        <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <Link href="/companies" className="inline-flex min-h-11 items-center text-blue-600 hover:underline">
-            企業一覧へ戻る
-          </Link>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Link href="/companies/board" className="inline-flex min-h-11 items-center text-sm text-blue-600 hover:underline">選考ボードへ戻る</Link>
-            <Link
-              href={`/companies/${company.id}/edit`}
-              className="inline-flex min-h-11 items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              詳細編集
-            </Link>
-
-            <form action="/logout" method="post">
-              <button
-                type="submit"
-                className="min-h-11 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-              >
-                ログアウト
-              </button>
-            </form>
-          </div>
-        </div>
-      </nav>
-
-      <main className="mx-auto max-w-6xl px-3 py-5 [overflow-wrap:anywhere] sm:px-4 sm:py-8">
+    <div className="ui-workspace">
+      <main id="main-content" className="ui-main [overflow-wrap:anywhere]">
+        <nav aria-label="企業詳細の操作" className="mb-5 flex flex-wrap gap-2">
+          <Link href="/companies" className="ui-button ui-secondary">企業一覧へ戻る</Link>
+          <Link href="/companies/board" className="ui-button ui-secondary">選考ボードへ戻る</Link>
+          <Link href={`/companies/${company.id}/edit`} className="ui-button ui-primary">詳細編集</Link>
+        </nav>
         <header className="mb-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="min-w-0">
@@ -157,7 +124,7 @@ export default async function CompanyDetailPage({ params, searchParams }: PagePr
 
         <div className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
           <section className="min-w-0 space-y-6">
-            <div className="rounded-xl bg-white p-6 shadow">
+            <div className="ui-panel">
               <h2 className="text-xl font-bold text-slate-950">基本情報</h2>
 
               <dl className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -191,7 +158,7 @@ export default async function CompanyDetailPage({ params, searchParams }: PagePr
               </dl>
             </div>
 
-            <div className="rounded-xl bg-white p-6 shadow">
+            <div className="ui-panel">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <h2 className="text-xl font-bold text-slate-950">
                   選考履歴・現在地
@@ -240,7 +207,7 @@ export default async function CompanyDetailPage({ params, searchParams }: PagePr
               </ol>
             </div>
 
-            <div className="rounded-xl bg-white p-6 shadow">
+            <div className="ui-panel">
               <h2 className="text-xl font-bold text-slate-950">メモ</h2>
               <div className="mt-4 min-h-32 rounded-lg border border-slate-200 bg-slate-50 p-4">
                 <p className="whitespace-pre-wrap text-slate-800">
@@ -277,9 +244,7 @@ export default async function CompanyDetailPage({ params, searchParams }: PagePr
 
               <h2 className="text-xl font-bold text-slate-950">詳細を更新</h2>
               {updateError === "conflict" && (
-                <p role="alert" className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-800">
-                  別の画面で企業情報が更新されたため保存できませんでした。最新の内容を確認してください。
-                </p>
+                <p role="alert" className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-800">{SELECTION_CONFLICT_MESSAGE}</p>
               )}
 
               <div className="mt-5 space-y-4">
@@ -330,61 +295,11 @@ export default async function CompanyDetailPage({ params, searchParams }: PagePr
                   </select>
                 </div>
 
-                <div>
-                  <label
-                    htmlFor="deadline_title"
-                    className="block text-sm font-medium text-slate-700"
-                  >
-                    締切タスク名
-                  </label>
-                  <input
-                    id="deadline_title"
-                    name="deadline_title"
-                    type="text"
-                    defaultValue={(deadlineTask as DeadlineTask | null)?.title ?? ""}
-                    placeholder="例: ESを提出する"
-                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="deadline_date"
-                    className="block text-sm font-medium text-slate-700"
-                  >
-                    締切日
-                  </label>
-                  <input
-                    id="deadline_date"
-                    name="deadline_date"
-                    type="date"
-                    defaultValue={deadlineDateInputValue(
-                      (deadlineTask as DeadlineTask | null)?.due_date,
-                    )}
-                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="deadline_priority"
-                    className="block text-sm font-medium text-slate-700"
-                  >
-                    締切の優先度
-                  </label>
-                  <select
-                    id="deadline_priority"
-                    name="deadline_priority"
-                    defaultValue={normalizeTaskPriority(
-                      String((deadlineTask as DeadlineTask | null)?.priority ?? "medium"),
-                    )}
-                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
-                  >
-                    <option value="low">低</option>
-                    <option value="medium">中</option>
-                    <option value="high">高</option>
-                  </select>
-                </div>
+                {deadlineTaskError ? (
+                  <p role="status" className="text-sm text-amber-900">締切タスクを取得できませんでした。企業情報は更新できます。</p>
+                ) : (
+                  <DeadlineFields task={deadlineTask as DeadlineTask | null} />
+                )}
 
                 <div>
                   <label
@@ -411,7 +326,7 @@ export default async function CompanyDetailPage({ params, searchParams }: PagePr
               </div>
             </form>
 
-            <div className="rounded-xl bg-white p-6 shadow">
+            <div className="ui-panel">
               <h2 className="text-xl font-bold text-slate-950">関連導線</h2>
               <div className="mt-4 grid gap-3">
                 <Link

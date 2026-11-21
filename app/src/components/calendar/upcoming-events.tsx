@@ -17,7 +17,7 @@ type UpcomingEventsProps = {
 
 export function UpcomingEvents({ events, hasError = false }: UpcomingEventsProps) {
   return (
-    <section className="rounded-xl bg-white p-5 shadow sm:p-6" aria-labelledby="upcoming-events-title">
+    <section className="ui-panel" aria-labelledby="upcoming-events-title">
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-sm font-medium text-blue-600">次の{UPCOMING_EVENT_DAYS}日間</p>

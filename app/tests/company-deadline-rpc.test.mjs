@@ -111,12 +111,12 @@ test("企業と締切のRPCはRLSを保ったまま原子的に保存する", as
         ) as anon_create,
         has_function_privilege(
           'authenticated',
-          'public.update_company_with_deadline(uuid,timestamp with time zone,text,text,text,text,integer,text,text,text,timestamp with time zone,text)',
+          'public.update_company_with_deadline(uuid,timestamp with time zone,text,text,text,text,integer,text,text,text,timestamp with time zone,text,uuid,timestamp with time zone)',
           'EXECUTE'
         ) as authenticated_update,
         has_function_privilege(
           'anon',
-          'public.update_company_with_deadline(uuid,timestamp with time zone,text,text,text,text,integer,text,text,text,timestamp with time zone,text)',
+          'public.update_company_with_deadline(uuid,timestamp with time zone,text,text,text,text,integer,text,text,text,timestamp with time zone,text,uuid,timestamp with time zone)',
           'EXECUTE'
         ) as anon_update
     `)).rows[0];
@@ -171,18 +171,41 @@ test("企業と締切のRPCはRLSを保ったまま原子的に保存する", as
   await db.query(`
     insert into public.tasks (id, workspace_id, title, due_date, status, related_company_id)
     values
-      ($1, $2, '同日先頭', '2026-11-25T14:59:59Z', 'doing', $3),
-      ($4, $2, '同日後続', '2026-11-25T14:59:59Z', 'todo', $3),
+      ($1, $2, '同日先頭', '2026-11-25T03:00:00Z', 'doing', $3),
+      ($4, $2, '同日後続', '2026-11-25T03:00:00Z', 'todo', $3),
       ($5, $6, 'workspace不一致', '2026-11-01T14:59:59Z', 'todo', $3)
   `, [lowerTaskId, company.workspace_id, companyId, higherTaskId, wrongWorkspaceTaskId, otherWorkspace]);
   await asUser(db, OWNER);
+  const displayedTask = (await db.query(`
+    select id, due_date, updated_at
+      from public.tasks
+     where related_company_id = $1
+       and workspace_id = $2
+       and status in ('todo', 'doing')
+       and due_date is not null
+     order by due_date, id
+     limit 1
+  `, [companyId, company.workspace_id])).rows[0];
   const updated = (await db.query(`
     select public.update_company_with_deadline(
       $1, $2, $3, '更新企業', null, 'IT', 5, '応募済み', '更新メモ',
-      '更新締切', '2026-12-15T14:59:59Z', 'high'
+      '更新締切', '2026-11-25T14:59:59Z', 'high', $4, $5
     ) as id
-  `, [companyId, company.updated_at, company.selection_status])).rows[0];
+  `, [
+    companyId,
+    company.updated_at,
+    company.selection_status,
+    displayedTask.id,
+    displayedTask.updated_at,
+  ])).rows[0];
   assert.equal(updated.id, companyId);
+  assert.equal(
+    new Date((await db.query(
+      "select due_date from public.tasks where id = $1",
+      [lowerTaskId],
+    )).rows[0].due_date).toISOString(),
+    new Date(displayedTask.due_date).toISOString(),
+  );
   const selectedTasks = (await db.query(
     "select id, title, status from public.tasks where id in ($1, $2, $3) order by id",
     [wrongWorkspaceTaskId, lowerTaskId, higherTaskId],
@@ -197,6 +220,10 @@ test("企業と締切のRPCはRLSを保ったまま原子的に保存する", as
     "select company_name, selection_status, memo, updated_at from public.companies where id = $1",
     [companyId],
   )).rows[0];
+  const currentDeadline = (await db.query(
+    "select id, updated_at from public.tasks where id = $1",
+    [lowerTaskId],
+  )).rows[0];
   for (const [expectedUpdatedAt, currentStatus] of [
     ["2000-01-01T00:00:00Z", beforeFailure.selection_status],
     [beforeFailure.updated_at, "未応募"],
@@ -204,9 +231,15 @@ test("企業と締切のRPCはRLSを保ったまま原子的に保存する", as
     const conflict = (await db.query(`
       select public.update_company_with_deadline(
         $1, $2, $3, '競合で保存されない企業名', null, 'IT', 5, '書類選考中', null,
-        '競合で保存されない締切', '2026-12-20T14:59:59Z', 'medium'
+        '競合で保存されない締切', '2026-12-20T14:59:59Z', 'medium', $4, $5
       ) as id
-    `, [companyId, expectedUpdatedAt, currentStatus])).rows[0];
+    `, [
+      companyId,
+      expectedUpdatedAt,
+      currentStatus,
+      currentDeadline.id,
+      currentDeadline.updated_at,
+    ])).rows[0];
     assert.equal(conflict.id, null);
   }
   assert.equal((await db.query(
@@ -215,31 +248,134 @@ test("企業と締切のRPCはRLSを保ったまま原子的に保存する", as
   )).rows[0].company_name, "更新企業");
 
   const taskBeforeFailure = (await db.query(
-    "select title, status, priority, due_date from public.tasks where id = $1",
+    "select id, title, status, priority, due_date, updated_at from public.tasks where id = $1",
     [lowerTaskId],
   )).rows[0];
   await assert.rejects(db.query(`
     select public.update_company_with_deadline(
       $1, $2, $3, '保存されない企業名', null, 'IT', 5, '書類選考中', null,
-      '保存されない締切', '2026-12-20T14:59:59Z', 'invalid'
+      '保存されない締切', '2026-12-20T14:59:59Z', 'invalid', $4, $5
     )
-  `, [companyId, beforeFailure.updated_at, beforeFailure.selection_status]), /tasks_priority_check/);
+  `, [
+    companyId,
+    beforeFailure.updated_at,
+    beforeFailure.selection_status,
+    taskBeforeFailure.id,
+    taskBeforeFailure.updated_at,
+  ]), /tasks_priority_check/);
   assert.deepEqual((await db.query(
     "select company_name, selection_status, memo, updated_at from public.companies where id = $1",
     [companyId],
   )).rows[0], beforeFailure);
   assert.deepEqual((await db.query(
-    "select title, status, priority, due_date from public.tasks where id = $1",
+    "select id, title, status, priority, due_date, updated_at from public.tasks where id = $1",
     [lowerTaskId],
   )).rows[0], taskBeforeFailure);
+
+  const externallyUpdatedTask = (await db.query(
+    "update public.tasks set title = '別画面で更新済み' where id = $1 returning id, title, updated_at",
+    [lowerTaskId],
+  )).rows[0];
+  assert.notEqual(
+    new Date(externallyUpdatedTask.updated_at).getTime(),
+    new Date(taskBeforeFailure.updated_at).getTime(),
+  );
+  await assert.rejects(db.query(`
+    select public.update_company_with_deadline(
+      $1, $2, $3, 'タスク競合で保存されない企業名', null, 'IT', 5, '書類選考中', null,
+      'タスク競合で保存されない締切', '2026-12-20T14:59:59Z', 'medium', $4, $5
+    )
+  `, [
+    companyId,
+    beforeFailure.updated_at,
+    beforeFailure.selection_status,
+    taskBeforeFailure.id,
+    taskBeforeFailure.updated_at,
+  ]), (error) => error.code === "40001");
+  assert.deepEqual((await db.query(
+    "select company_name, selection_status, memo, updated_at from public.companies where id = $1",
+    [companyId],
+  )).rows[0], beforeFailure);
+  assert.equal((await db.query(
+    "select title from public.tasks where id = $1",
+    [lowerTaskId],
+  )).rows[0].title, "別画面で更新済み");
+
+  const earlierTaskId = "00000000-0000-0000-0000-000000000007";
+  await db.exec("reset role");
+  await db.query(`
+    insert into public.tasks (id, workspace_id, title, due_date, status, related_company_id)
+    values ($1, $2, '後から先頭になった締切', '2026-11-20T14:59:59Z', 'todo', $3)
+  `, [earlierTaskId, company.workspace_id, companyId]);
+  await asUser(db, OWNER);
+  await assert.rejects(db.query(`
+    select public.update_company_with_deadline(
+      $1, $2, $3, '先頭差し替えで保存されない企業名', null, 'IT', 5, '書類選考中', null,
+      '先頭差し替えで保存されない締切', '2026-12-20T14:59:59Z', 'medium', $4, $5
+    )
+  `, [
+    companyId,
+    beforeFailure.updated_at,
+    beforeFailure.selection_status,
+    externallyUpdatedTask.id,
+    externallyUpdatedTask.updated_at,
+  ]), (error) => error.code === "40001");
+  assert.deepEqual((await db.query(
+    "select company_name, selection_status, memo, updated_at from public.companies where id = $1",
+    [companyId],
+  )).rows[0], beforeFailure);
+
+  await db.exec("reset role");
+  await db.query(
+    "update public.tasks set status = 'done' where related_company_id = $1 and workspace_id = $2",
+    [companyId, company.workspace_id],
+  );
+  await asUser(db, OWNER);
+  assert.equal((await db.query(`
+    select count(*)::int as count
+      from public.tasks
+     where related_company_id = $1
+       and workspace_id = $2
+       and status in ('todo', 'doing')
+       and due_date is not null
+  `, [companyId, company.workspace_id])).rows[0].count, 0);
+  const addedAfterEmptyTaskId = "00000000-0000-0000-0000-000000000008";
+  await db.exec("reset role");
+  await db.query(`
+    insert into public.tasks (id, workspace_id, title, due_date, status, related_company_id)
+    values ($1, $2, '表示後に追加された締切', '2026-11-19T14:59:59Z', 'todo', $3)
+  `, [addedAfterEmptyTaskId, company.workspace_id, companyId]);
+  await asUser(db, OWNER);
+  await assert.rejects(db.query(`
+    select public.update_company_with_deadline(
+      $1, $2, $3, '空表示競合で保存されない企業名', null, 'IT', 5, '書類選考中', null,
+      '空表示競合で保存されない締切', '2026-12-20T14:59:59Z', 'medium', null, null
+    )
+  `, [companyId, beforeFailure.updated_at, beforeFailure.selection_status]), (error) => (
+    error.code === "40001"
+  ));
+  assert.deepEqual((await db.query(
+    "select company_name, selection_status, memo, updated_at from public.companies where id = $1",
+    [companyId],
+  )).rows[0], beforeFailure);
+  assert.equal((await db.query(
+    "select title from public.tasks where id = $1",
+    [addedAfterEmptyTaskId],
+  )).rows[0].title, "表示後に追加された締切");
 
   await asUser(db, OTHER);
   const rejected = (await db.query(`
     select public.update_company_with_deadline(
       $1, $2, $3, '他人の更新', null, 'IT', 0, '未応募', null,
-      '他人の締切', '2026-12-31T14:59:59Z', 'low'
+      '他人の締切', '2026-12-31T14:59:59Z', 'low', $4, $5
     ) as id
-  `, [companyId, beforeFailure.updated_at, beforeFailure.selection_status])).rows[0];
+  `, [
+    companyId,
+    beforeFailure.updated_at,
+    beforeFailure.selection_status,
+    taskBeforeFailure.id,
+    taskBeforeFailure.updated_at,
+  ])).rows[0];
   assert.equal(rejected.id, null);
   await asUser(db, OWNER);
   assert.equal((await db.query(

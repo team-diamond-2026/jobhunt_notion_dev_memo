@@ -76,6 +76,8 @@ function loadPage(records = companies, { events = [], todayTasks = [], weeklyTas
     },
     "../lib/selection-status": selectionStatus,
     "@/components/calendar/upcoming-events": { UpcomingEvents: () => null },
+    "@/components/page-heading": { PageHeading: ({ title }) => React.createElement("h1", null, title) },
+    "@/components/status-badge": { StatusBadge: ({ status }) => React.createElement("span", null, status) },
     "@/lib/calendar": calendar,
   };
   const exports = {};

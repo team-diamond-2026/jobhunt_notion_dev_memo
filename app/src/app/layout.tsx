@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { createClient } from "../lib/supabase/server";
+import { AppHeader } from "@/components/app-header";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Job Hunt Dashboard",
-  description: "就職活動の予定・企業・選考状況を一元管理するダッシュボード",
+  title: "Shukatsu OS | 就活管理",
+  description: "企業研究、選考状況、ESをまとめて管理する就活ワークスペース",
 };
 
 function getThemeClass(settings: unknown) {
@@ -48,7 +49,10 @@ export default async function RootLayout({
       className={`${themeClass} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {user && <AppHeader displayName={user.user_metadata?.display_name || user.email || "ユーザー"} />}
+        {children}
+      </body>
     </html>
   );
 }

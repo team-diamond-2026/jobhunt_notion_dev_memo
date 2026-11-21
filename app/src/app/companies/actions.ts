@@ -110,25 +110,8 @@ export async function createCompany(formData: FormData) {
 
   const safeMotivationLevel = Math.min(Math.max(motivation_level, 0), 5);
 
-  const { data: workspace, error: workspaceLookupError } = await supabase
-    .from("workspaces")
-    .select("id")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  if (workspaceLookupError) {
-    throw new Error(`Workspaceの取得に失敗しました: ${workspaceLookupError.message}`);
-  }
-
-  if (!workspace?.id) {
-    throw new Error("Workspaceが見つからないため、企業を登録できません");
-  }
-
   const companyValues = {
     user_id: user.id,
-    workspace_id: workspace.id,
     company_name,
     industry_category,
     industry: industry || null,
@@ -157,6 +140,7 @@ export async function createCompany(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/companies");
+  revalidatePath("/companies/board");
 }
 
 export async function deleteCompany(formData: FormData) {
@@ -188,6 +172,7 @@ export async function deleteCompany(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/companies");
+  revalidatePath("/companies/board");
 }
 
 export async function updateCompany(formData: FormData) {
@@ -234,7 +219,6 @@ export async function updateCompany(formData: FormData) {
   if (currentCompanyError || !currentCompany) {
     throw new Error("更新対象の企業が見つかりません");
   }
-
   const companyPath = `/companies/${companyId}`;
   const conflictPath = formData.get("return_to") === "edit"
     ? `${companyPath}/edit?error=conflict`
@@ -263,8 +247,11 @@ export async function updateCompany(formData: FormData) {
       p_deadline_title: deadline.title,
       p_deadline_due_date: deadline.due_date,
       p_deadline_priority: deadline.priority,
+      p_deadline_task_id: String(formData.get("deadline_task_id") ?? "") || null,
+      p_deadline_task_updated_at: String(formData.get("deadline_task_updated_at") ?? "") || null,
     });
 
+    if (error?.code === "40001") redirect(conflictPath);
     if (error) {
       throw new Error(`企業と締切タスクの更新に失敗しました: ${error.message}`);
     }
@@ -300,8 +287,8 @@ export async function updateCompany(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/companies");
+  revalidatePath("/companies/board");
   revalidatePath(companyPath);
   revalidatePath(`${companyPath}/edit`);
-  revalidatePath("/companies/board");
-  redirect(`/companies/${companyId}`);
+  redirect(companyPath);
 }

@@ -1,3 +1,4 @@
+import { PageHeading } from "@/components/page-heading";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "../../../../lib/supabase/server";
@@ -7,12 +8,10 @@ import { IndustryFields } from "../../industry-fields";
 import {
   getSelectionStatusIndex,
   normalizeSelectionStatus,
+  SELECTION_CONFLICT_MESSAGE,
   SELECTION_STATUS_OPTIONS,
 } from "../../../../lib/selection-status";
-import {
-  deadlineDateInputValue,
-  normalizeTaskPriority,
-} from "../../../../lib/task";
+import { DeadlineFields, type DeadlineTask } from "../../deadline-fields";
 
 type Company = {
   id: string;
@@ -26,12 +25,6 @@ type Company = {
   memo: string | null;
   created_at: string;
   updated_at: string;
-};
-
-type DeadlineTask = {
-  title: string;
-  due_date: string;
-  priority: string;
 };
 
 type PageProps = {
@@ -72,7 +65,7 @@ export default async function CompanyEditPage({ params, searchParams }: PageProp
   } as Company;
   const { data: deadlineTask, error: deadlineTaskError } = await supabase
     .from("tasks")
-    .select("title, due_date, priority")
+    .select("id, title, due_date, priority, updated_at")
     .eq("related_company_id", company.id)
     .eq("workspace_id", company.workspace_id)
     .in("status", ["todo", "doing"])
@@ -82,9 +75,6 @@ export default async function CompanyEditPage({ params, searchParams }: PageProp
     .limit(1)
     .maybeSingle();
 
-  if (deadlineTaskError) {
-    throw new Error(`締切タスクの取得に失敗しました: ${deadlineTaskError.message}`);
-  }
 
   const progressIndex = getSelectionStatusIndex(company.selection_status);
   const industryFormValues = getIndustryFormValues(
@@ -93,37 +83,12 @@ export default async function CompanyEditPage({ params, searchParams }: PageProp
   );
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <nav className="bg-white border-b">
-        <div className="max-w-4xl mx-auto h-16 px-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-black">企業編集</h1>
+    <div className="ui-workspace">
+      <div className="ui-toolbar ui-toolbar-narrow"><Link href={`/companies/${company.id}`} className="ui-link">← 企業詳細へ戻る</Link></div>
 
-          <div className="flex items-center gap-4">
-            <Link
-              href={`/companies/${company.id}`}
-              className="text-blue-600 hover:underline"
-            >
-              企業詳細へ戻る
-            </Link>
-
-            <Link href="/companies" className="text-blue-600 hover:underline">
-              企業一覧へ戻る
-            </Link>
-
-            <form action="/logout" method="post">
-              <button
-                type="submit"
-                className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700"
-              >
-                ログアウト
-              </button>
-            </form>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <section className="bg-white rounded-xl shadow p-6">
+      <main id="main-content" className="ui-main ui-main-narrow space-y-6">
+        <PageHeading title="企業編集" description="企業情報と選考状況を見直して、最新の情報を保存しましょう。" />
+        <section className="ui-panel">
           <h2 className="text-2xl font-bold text-black mb-6">企業情報を編集</h2>
 
           <form action={updateCompany} className="grid gap-4">
@@ -131,19 +96,18 @@ export default async function CompanyEditPage({ params, searchParams }: PageProp
             <input type="hidden" name="expected_updated_at" value={company.updated_at} />
             <input type="hidden" name="return_to" value="edit" />
             {updateError === "conflict" && (
-              <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
-                別の画面で企業情報が更新されたため保存できませんでした。最新の内容を確認してください。
-              </p>
+              <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">{SELECTION_CONFLICT_MESSAGE}</p>
             )}
 
             <div>
-              <label className="block text-black mb-1">企業名 *</label>
+              <label htmlFor="company_name" className="ui-label">企業名 *</label>
               <input
+                id="company_name"
                 name="company_name"
                 type="text"
                 required
                 defaultValue={company.company_name}
-                className="w-full border text-black px-3 py-2"
+                className="ui-field"
               />
             </div>
 
@@ -153,11 +117,12 @@ export default async function CompanyEditPage({ params, searchParams }: PageProp
             />
 
             <div>
-              <label className="block text-black mb-1">志望度</label>
+              <label htmlFor="motivation_level" className="ui-label">志望度</label>
               <select
+                id="motivation_level"
                 name="motivation_level"
                 defaultValue={String(company.motivation_level)}
-                className="w-full border text-black px-3 py-2"
+                className="ui-field"
               >
                 <option value="0">0</option>
                 <option value="1">1</option>
@@ -169,11 +134,12 @@ export default async function CompanyEditPage({ params, searchParams }: PageProp
             </div>
 
             <div>
-              <label className="block text-black mb-1">選考ステータス</label>
+              <label htmlFor="selection_status" className="ui-label">選考ステータス</label>
               <select
+                id="selection_status"
                 name="selection_status"
                 defaultValue={company.selection_status}
-                className="w-full border text-black px-3 py-2"
+                className="ui-field"
               >
                 {SELECTION_STATUS_OPTIONS.map((status, index) => (
                   <option
@@ -187,74 +153,34 @@ export default async function CompanyEditPage({ params, searchParams }: PageProp
               </select>
             </div>
 
-            <div>
-              <label className="block text-black mb-1" htmlFor="deadline_title">
-                締切タスク名
-              </label>
-              <input
-                id="deadline_title"
-                name="deadline_title"
-                type="text"
-                defaultValue={(deadlineTask as DeadlineTask | null)?.title ?? ""}
-                placeholder="例: ESを提出する"
-                className="w-full border text-black px-3 py-2"
-              />
-            </div>
+            {deadlineTaskError ? (
+              <p role="status" className="text-sm text-amber-900">締切タスクを取得できませんでした。企業情報は更新できます。</p>
+            ) : (
+              <DeadlineFields task={deadlineTask as DeadlineTask | null} />
+            )}
 
             <div>
-              <label className="block text-black mb-1" htmlFor="deadline_date">
-                締切日
-              </label>
-              <input
-                id="deadline_date"
-                name="deadline_date"
-                type="date"
-                defaultValue={deadlineDateInputValue(
-                  (deadlineTask as DeadlineTask | null)?.due_date,
-                )}
-                className="w-full border text-black px-3 py-2"
-              />
-            </div>
-
-            <div>
-              <label className="block text-black mb-1" htmlFor="deadline_priority">
-                締切の優先度
-              </label>
-              <select
-                id="deadline_priority"
-                name="deadline_priority"
-                defaultValue={normalizeTaskPriority(
-                  String((deadlineTask as DeadlineTask | null)?.priority ?? "medium"),
-                )}
-                className="w-full border text-black px-3 py-2"
-              >
-                <option value="low">低</option>
-                <option value="medium">中</option>
-                <option value="high">高</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-black mb-1">メモ</label>
+              <label htmlFor="memo" className="ui-label">メモ</label>
               <textarea
+                id="memo"
                 name="memo"
                 rows={5}
                 defaultValue={company.memo ?? ""}
-                className="w-full border text-black px-3 py-2"
+                className="ui-field"
               />
             </div>
 
             <div className="flex items-center gap-3 pt-2">
               <button
                 type="submit"
-                className="px-5 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700"
+                className="ui-button ui-primary"
               >
                 更新する
               </button>
 
               <Link
                 href={`/companies/${company.id}`}
-                className="px-5 py-2 rounded-md bg-slate-200 text-black hover:bg-slate-300"
+                className="ui-button ui-secondary"
               >
                 キャンセル
               </Link>

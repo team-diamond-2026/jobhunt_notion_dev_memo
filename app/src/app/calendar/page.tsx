@@ -19,6 +19,7 @@ import {
   todayDateKey,
 } from "@/lib/calendar";
 import { createClient } from "@/lib/supabase/server";
+import { PageHeading } from "@/components/page-heading";
 
 const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
 
@@ -144,26 +145,9 @@ export default async function CalendarPage({ searchParams }: PageProps) {
   );
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <nav className="border-b bg-white">
-        <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:flex-nowrap sm:py-0">
-          <div>
-            <p className="text-xs font-medium text-blue-600">Job Hunt Dashboard</p>
-            <h1 className="text-xl font-bold text-slate-950 sm:text-2xl">カレンダー</h1>
-          </div>
-          <div className="flex items-center gap-3 text-sm">
-            <Link href="/" className="text-blue-600 hover:underline">ダッシュボード</Link>
-            <Link href="/settings" className="text-blue-600 hover:underline">設定</Link>
-            <form action="/logout" method="post">
-              <button type="submit" className="rounded-md bg-red-600 px-3 py-2 font-medium text-white hover:bg-red-700">
-                ログアウト
-              </button>
-            </form>
-          </div>
-        </div>
-      </nav>
-
-      <main className="mx-auto max-w-7xl space-y-6 px-3 py-5 sm:px-4 sm:py-8">
+    <div className="ui-workspace">
+      <main id="main-content" className="ui-main space-y-6">
+        <PageHeading title="カレンダー" description="面接・説明会・締切をまとめて管理できます。" />
         {isLocalPreview ? (
           <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="status">
             表示確認用のサンプルです。予定の保存・編集はできません。

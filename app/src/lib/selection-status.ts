@@ -12,6 +12,9 @@ export const SELECTION_STATUS_OPTIONS = [
 
 export type SelectionStatus = (typeof SELECTION_STATUS_OPTIONS)[number];
 
+export const SELECTION_CONFLICT_MESSAGE =
+  "別の画面で企業情報が更新されたため保存できませんでした。最新の内容を確認してください。";
+
 const LEGACY_STATUS_MAP: Record<string, SelectionStatus> = {
   未エントリー: "未応募",
   ES提出: "応募済み",
@@ -22,7 +25,7 @@ const LEGACY_STATUS_MAP: Record<string, SelectionStatus> = {
   not_entered: "未応募",
 };
 
-export function isSelectionStatus(value: string): value is SelectionStatus {
+export function isSelectionStatus(value: unknown): value is SelectionStatus {
   return SELECTION_STATUS_OPTIONS.includes(value as SelectionStatus);
 }
 
@@ -45,3 +48,13 @@ export function canAdvanceSelectionStatus(current: string, next: string) {
 
   return getSelectionStatusIndex(next) >= getSelectionStatusIndex(current);
 }
+
+export type SelectionCompany = {
+  id: string;
+  company_name: string;
+  industry: string | null;
+  motivation_level: number;
+  memo?: string | null;
+  selection_status: string | null;
+  updated_at: string;
+};

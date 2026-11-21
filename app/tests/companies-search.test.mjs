@@ -67,7 +67,9 @@ function loadPage({ records = companies, user = { id: "user-1" }, error = null }
       }),
     },
     "./actions": { createCompany: "/create-company", deleteCompany: "/delete-company" },
-    "./industry-fields": { IndustryFields: () => null },
+    "./create-form": { CompanyCreateForm: () => null },
+    "@/components/page-heading": { PageHeading: ({ title }) => React.createElement("h1", null, title) },
+    "@/components/status-badge": { StatusBadge: ({ status }) => React.createElement("span", null, status) },
     "../../lib/selection-status": { SELECTION_STATUS_OPTIONS: ["未エントリー", "内定"] },
   };
   const exports = {};
