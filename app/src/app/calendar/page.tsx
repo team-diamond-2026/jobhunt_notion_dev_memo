@@ -2,9 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   buildCalendarHref,
+  CALENDAR_EVENT_COLUMNS,
   CalendarEvent,
   CalendarView,
   dateKeyToStartIso,
+  eventDateKey,
   eventOccursOnDate,
   formatDateLabel,
   formatEventDateTime,
@@ -47,7 +49,7 @@ function EventLink({
       <span className={`${compact ? "text-[11px]" : "text-xs"} block font-medium`}>
         {getEventTypeLabel(event.event_type)} · {formatEventTime(event.start_at)}
       </span>
-      <span className={`${compact ? "text-xs" : "text-sm"} mt-0.5 block truncate font-semibold`}>
+      <span className={`${compact ? "truncate text-xs" : "text-sm [overflow-wrap:anywhere]"} mt-0.5 block font-semibold`}>
         {event.title}
       </span>
     </Link>
@@ -87,7 +89,7 @@ function getPreviewEvents(anchorKey: string): CalendarEvent[] {
 }
 
 export default async function CalendarPage({ searchParams }: PageProps) {
-  const isLocalPreview = process.env.CALENDAR_PREVIEW === "true";
+  const isLocalPreview = process.env.NODE_ENV === "development" && process.env.CALENDAR_PREVIEW === "true";
   const supabase = await createClient();
 
   if (!isLocalPreview) {
@@ -106,10 +108,15 @@ export default async function CalendarPage({ searchParams }: PageProps) {
   const period = getCalendarPeriod(view, anchorKey);
   const periodStartIso = dateKeyToStartIso(period.startKey);
   const queryResult = isLocalPreview
-    ? { data: getPreviewEvents(anchorKey), error: null }
+    ? {
+        data: getPreviewEvents(todayDateKey()).filter((event) =>
+          period.dayKeys.some((dateKey) => eventOccursOnDate(event, dateKey)),
+        ),
+        error: null,
+      }
     : await supabase
         .from("events")
-        .select("id,title,event_type,start_at,end_at,related_company_id")
+        .select(CALENDAR_EVENT_COLUMNS)
         .lt("start_at", dateKeyToStartIso(period.endKeyExclusive))
         .or(`start_at.gte.${periodStartIso},end_at.gt.${periodStartIso}`)
         .order("start_at", { ascending: true });
@@ -128,6 +135,7 @@ export default async function CalendarPage({ searchParams }: PageProps) {
   const selectedEvent = params.event
     ? events.find((event) => event.id === params.event)
     : undefined;
+  const selectedDateKey = selectedEvent ? eventDateKey(selectedEvent.start_at) : anchorKey;
   const monthKey = anchorKey.slice(0, 7);
   const agendaDays = period.dayKeys.filter((dateKey) =>
     view === "week"
@@ -156,6 +164,11 @@ export default async function CalendarPage({ searchParams }: PageProps) {
       </nav>
 
       <main className="mx-auto max-w-7xl space-y-6 px-3 py-5 sm:px-4 sm:py-8">
+        {isLocalPreview ? (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="status">
+            表示確認用のサンプルです。予定の保存・編集はできません。
+          </p>
+        ) : null}
         <section className="rounded-xl bg-white p-4 shadow sm:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -168,35 +181,35 @@ export default async function CalendarPage({ searchParams }: PageProps) {
             <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex rounded-lg border border-slate-300 bg-slate-50 p-1" aria-label="表示期間">
                 <Link
-                  href={buildCalendarHref("month", anchorKey)}
+                  href={buildCalendarHref("month", selectedDateKey, selectedEvent?.id)}
                   aria-current={view === "month" ? "page" : undefined}
-                  className={`rounded-md px-3 py-2 text-sm font-medium ${view === "month" ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:text-slate-950"}`}
+                  className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-3 py-2 text-sm font-medium ${view === "month" ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:text-slate-950"}`}
                 >
                   月
                 </Link>
                 <Link
-                  href={buildCalendarHref("week", anchorKey)}
+                  href={buildCalendarHref("week", selectedDateKey, selectedEvent?.id)}
                   aria-current={view === "week" ? "page" : undefined}
-                  className={`rounded-md px-3 py-2 text-sm font-medium ${view === "week" ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:text-slate-950"}`}
+                  className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-3 py-2 text-sm font-medium ${view === "week" ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:text-slate-950"}`}
                 >
                   週
                 </Link>
               </div>
-              <Link href={buildCalendarHref(view, todayDateKey())} className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+              <Link href={buildCalendarHref(view, todayDateKey())} className="inline-flex min-h-11 items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
                 今日
               </Link>
-              <Link href="/calendar/events/new" className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700">
+              {!isLocalPreview ? <Link href="/calendar/events/new" className="inline-flex min-h-11 items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700">
                 予定を追加
-              </Link>
+              </Link> : null}
             </div>
           </div>
 
-          <div className="mt-6 flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
-            <Link href={buildCalendarHref(view, period.previousKey)} aria-label="前の期間" className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+          <div className="mt-6 flex items-center justify-between gap-2 border-t border-slate-200 pt-4">
+            <Link href={buildCalendarHref(view, period.previousKey)} aria-label="前の期間" className="inline-flex min-h-11 shrink-0 items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
               ← 前へ
             </Link>
-            <p className="text-center text-base font-bold text-slate-950 sm:text-lg">{period.label}</p>
-            <Link href={buildCalendarHref(view, period.nextKey)} aria-label="次の期間" className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+            <p className="min-w-0 text-center text-base font-bold text-slate-950 sm:text-lg">{period.label}</p>
+            <Link href={buildCalendarHref(view, period.nextKey)} aria-label="次の期間" className="inline-flex min-h-11 shrink-0 items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
               次へ →
             </Link>
           </div>
@@ -275,13 +288,13 @@ export default async function CalendarPage({ searchParams }: PageProps) {
         {selectedEvent ? (
           <section id="event-detail" className="scroll-mt-4 rounded-xl border border-blue-200 bg-white p-5 shadow sm:p-6" aria-labelledby="event-detail-title">
             <div className="flex items-start justify-between gap-4">
-              <div>
+              <div className="min-w-0 flex-1">
                 <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${getEventTypeStyle(selectedEvent.event_type)}`}>
                   {getEventTypeLabel(selectedEvent.event_type)}
                 </span>
-                <h2 id="event-detail-title" className="mt-3 text-xl font-bold text-slate-950 sm:text-2xl">{selectedEvent.title}</h2>
+                <h2 id="event-detail-title" className="mt-3 text-xl font-bold text-slate-950 [overflow-wrap:anywhere] sm:text-2xl">{selectedEvent.title}</h2>
               </div>
-              <Link href={buildCalendarHref(view, anchorKey)} className="shrink-0 text-sm font-medium text-slate-500 hover:text-slate-950">
+              <Link href={buildCalendarHref(view, anchorKey)} className="inline-flex min-h-11 shrink-0 items-center text-sm font-medium text-slate-500 hover:text-slate-950">
                 閉じる
               </Link>
             </div>
@@ -300,12 +313,12 @@ export default async function CalendarPage({ searchParams }: PageProps) {
             <p className="mt-5 border-t border-slate-200 pt-4 text-sm text-slate-500">
               この画面では、予定の種別と開始・終了日時を確認できます。
             </p>
-            <Link
+            {!isLocalPreview ? <Link
               href={`/calendar/events/${selectedEvent.id}/edit`}
-              className="mt-4 inline-flex rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="mt-4 inline-flex min-h-11 items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
             >
               予定を編集
-            </Link>
+            </Link> : null}
           </section>
         ) : params.event && !error ? (
           <section id="event-detail" className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900" role="status">

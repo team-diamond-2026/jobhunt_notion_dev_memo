@@ -6,6 +6,8 @@ import {
   formatEventDateTime,
   getEventTypeLabel,
   getEventTypeStyle,
+  UPCOMING_EVENT_DAYS,
+  UPCOMING_EVENT_LIMIT,
 } from "@/lib/calendar";
 
 type UpcomingEventsProps = {
@@ -18,7 +20,7 @@ export function UpcomingEvents({ events, hasError = false }: UpcomingEventsProps
     <section className="rounded-xl bg-white p-5 shadow sm:p-6" aria-labelledby="upcoming-events-title">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-sm font-medium text-blue-600">次の7日間</p>
+          <p className="text-sm font-medium text-blue-600">次の{UPCOMING_EVENT_DAYS}日間</p>
           <h3 id="upcoming-events-title" className="mt-1 text-xl font-bold text-slate-950 sm:text-2xl">
             直近の予定
           </h3>
@@ -27,6 +29,9 @@ export function UpcomingEvents({ events, hasError = false }: UpcomingEventsProps
           カレンダー
         </Link>
       </div>
+      <p className="mt-2 text-sm text-slate-500">
+        開始日時順に最大{UPCOMING_EVENT_LIMIT}件表示。すべての予定はカレンダーで確認できます。
+      </p>
 
       {hasError ? (
         <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" role="status">
