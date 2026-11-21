@@ -1,18 +1,5 @@
 import type { EsDocumentType } from "./es";
 
-export type EsDraftValues = {
-  company_id: string;
-  title: string;
-  doc_type: string;
-  content: string;
-};
-
-export type EsCreateState = {
-  attempt: number;
-  error: string;
-  values: EsDraftValues;
-} | undefined;
-
 type EsTemplate = {
   readonly id: string;
   readonly name: string;

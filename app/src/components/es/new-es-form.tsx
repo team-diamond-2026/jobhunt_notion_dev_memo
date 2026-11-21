@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { createEsDocument } from "@/app/es/actions";
-import type { EsDraftValues } from "@/lib/es-templates";
+import type { EsDraftValues } from "@/lib/es";
 import { EsForm, type EsCompanyOption } from "./es-form";
 
 export function NewEsForm({ companies, initialValues }: {

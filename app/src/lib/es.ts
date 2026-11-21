@@ -19,6 +19,14 @@ export type EsDocument = {
   updated_at: string;
 };
 
+export type EsDraftValues = Pick<EsDocument, "company_id" | "title" | "doc_type" | "content">;
+
+export type EsSaveState = {
+  attempt: number;
+  error: string;
+  values: EsDraftValues;
+} | undefined;
+
 export function isEsDocumentType(value: string): value is EsDocumentType {
   return ES_DOCUMENT_TYPE_OPTIONS.some((option) => option.value === value);
 }
