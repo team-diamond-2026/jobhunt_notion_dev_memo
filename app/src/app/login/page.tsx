@@ -140,8 +140,8 @@ export default function LoginPage() {
       : "ログイン";
 
   return (
-    <main className="min-h-dvh bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
-      <div className="mx-auto flex min-h-[calc(100dvh-6rem)] w-full max-w-md items-center">
+    <main className="min-h-dvh bg-gray-50 px-4 py-6 sm:px-6 sm:py-12 lg:px-8">
+      <div className="mx-auto flex min-h-[calc(100dvh-3rem)] w-full max-w-md items-center sm:min-h-[calc(100dvh-6rem)]">
         <section className="ui-auth-card w-full space-y-8">
           <header className="text-center">
             <p className="ui-eyebrow">SHUKATSU OS</p>
@@ -179,6 +179,7 @@ export default function LoginPage() {
                 <input
                   id="displayName"
                   type="text"
+                  autoComplete="nickname"
                   value={displayName}
                   onChange={(event) => setDisplayName(event.target.value)}
                   placeholder="山田 太郎"
@@ -198,6 +199,7 @@ export default function LoginPage() {
                 id="email"
                 type="email"
                 autoComplete="email"
+                autoCapitalize="none"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="you@example.com"

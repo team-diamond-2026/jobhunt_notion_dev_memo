@@ -128,7 +128,7 @@ export default async function Home() {
             就活管理アプリのダッシュボードです。企業情報や選考状況をここから確認できます。
           </p>
 
-          <div className="flex flex-wrap gap-3 mt-6">
+          <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap">
             <Link
               href="/companies"
               className="ui-button ui-primary"
@@ -143,7 +143,7 @@ export default async function Home() {
               選考管理ボードを見る
             </Link>
 
-            <Link href="/interviews" className="inline-flex min-h-11 items-center rounded-md bg-blue-600 px-5 py-2 text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-blue-600">
+            <Link href="/interviews" className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-blue-600 px-5 py-2 text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-blue-600 sm:w-auto">
               面接ログを見る
             </Link>
 
@@ -234,7 +234,7 @@ export default async function Home() {
 
               <div>
                 <dt className="text-sm text-slate-500">ユーザーID</dt>
-                <dd className="text-black break-all">{user.id}</dd>
+                <dd className="text-black font-mono text-sm [overflow-wrap:anywhere]">{user.id}</dd>
               </div>
 
               <div>

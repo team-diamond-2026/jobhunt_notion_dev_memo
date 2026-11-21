@@ -265,7 +265,7 @@ body {
   .ui-link:hover { text-decoration: underline; text-underline-offset: .2em; }
   .ui-field { display: block; width: 100%; margin-top: .375rem; padding: .625rem .75rem; }
   .ui-label { display: block; color: var(--ink); font-size: .875rem; font-weight: 600; }
-  .ui-feedback { border: 1px solid currentColor; border-radius: .75rem; padding: 1rem; font-size: .9375rem; }
+  .ui-feedback { overflow-wrap: anywhere; border: 1px solid currentColor; border-radius: .75rem; padding: 1rem; font-size: .9375rem; }
   .ui-feedback-error { background: var(--danger-soft); color: var(--danger); }
   .ui-feedback-success { background: var(--success-soft); color: var(--success); }
   .ui-empty-state { padding: 2rem 1.25rem; text-align: center; }
