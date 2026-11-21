@@ -16,7 +16,13 @@ export async function signUp(email: string, password: string, displayName?: stri
     },
   })
   
-  if (error) throw error
+  if (error) {
+    // レート制限エラーを含むエラーメッセージを保持
+    const errorMessage = error.message || "サインアップに失敗しました"
+    const customError = new Error(errorMessage)
+    throw customError
+  }
+  
   return data
 }
 
@@ -31,6 +37,56 @@ export async function signIn(email: string, password: string) {
     password,
   })
   
+  if (error) throw error
+  return data
+}
+
+/**
+ * Send a password reset email.
+ */
+export async function requestPasswordReset(email: string, redirectTo: string) {
+  const supabase = createClient()
+
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo,
+  })
+
+  if (error) throw error
+  return data
+}
+
+/**
+ * Exchange a Supabase auth callback code for a session.
+ */
+export async function exchangePasswordResetCode(code: string) {
+  const supabase = createClient()
+
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+
+  if (error) throw error
+  return data
+}
+
+/**
+ * Read the session established by a password reset link.
+ */
+export async function getPasswordResetSession() {
+  const supabase = createClient()
+
+  const { data, error } = await supabase.auth.getSession()
+
+  if (error) throw error
+  return data.session
+}
+
+/**
+ * Update the current user's password after a reset session is established.
+ */
+export async function updatePassword(password: string) {
+  const supabase = createClient()
+
+  const { data, error } = await supabase.auth.updateUser({ password })
+
   if (error) throw error
   return data
 }

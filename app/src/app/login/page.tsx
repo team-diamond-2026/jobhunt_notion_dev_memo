@@ -1,147 +1,293 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { signIn, signUp } from "../../lib/supabase/auth";
+import {
+  requestPasswordReset,
+  signIn,
+  signUp,
+} from "../../lib/supabase/auth";
+
+type AuthMode = "login" | "signup" | "reset";
+
+function getDefaultViewPath(settings: unknown) {
+  if (typeof settings !== "object" || settings === null || !("default_view" in settings)) {
+    return "/";
+  }
+
+  switch ((settings as { default_view?: unknown }).default_view) {
+    case "companies":
+      return "/companies";
+    case "board":
+      return "/companies/board";
+    default:
+      return "/";
+  }
+}
+
+function getFriendlyError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return "エラーが発生しました。時間をおいてもう一度お試しください。";
+  }
+
+  const message = error.message;
+
+  if (message.includes("rate limit") || message.includes("too many")) {
+    return "短時間に何度も送信されています。少し待ってからもう一度お試しください。";
+  }
+
+  if (message.includes("Email not confirmed")) {
+    return "メールアドレスの確認が完了していません。確認メールをご確認ください。";
+  }
+
+  if (message.includes("Invalid login credentials")) {
+    return "メールアドレスまたはパスワードが正しくありません。";
+  }
+
+  if (message.includes("User already registered")) {
+    return "このメールアドレスはすでに登録されています。";
+  }
+
+  return message;
+}
 
 export default function LoginPage() {
   const router = useRouter();
+  const [mode, setMode] = useState<AuthMode>("login");
+  const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [displayName, setDisplayName] = useState("");
+  const [signUpCooldown, setSignUpCooldown] = useState(0);
+  const signUpTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const isSignUp = mode === "signup";
+  const isReset = mode === "reset";
+
+  useEffect(() => {
+    if (signUpCooldown > 0) {
+      signUpTimeoutRef.current = setTimeout(() => {
+        setSignUpCooldown((current) => current - 1);
+      }, 1000);
+    }
+
+    return () => {
+      if (signUpTimeoutRef.current) {
+        clearTimeout(signUpTimeoutRef.current);
+      }
+    };
+  }, [signUpCooldown]);
+
+  const switchMode = (nextMode: AuthMode) => {
+    setMode(nextMode);
+    setError(null);
+    setSuccessMessage(null);
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setIsLoading(true);
     setError(null);
     setSuccessMessage(null);
 
     try {
+      if (isReset) {
+        const redirectTo = `${window.location.origin}/reset-password`;
+        await requestPasswordReset(email, redirectTo);
+        setSuccessMessage(
+          "パスワード再設定メールを送信しました。メール内のリンクから新しいパスワードを設定してください。",
+        );
+        setPassword("");
+        return;
+      }
+
       if (isSignUp) {
-        // サインアップ処理
+        if (signUpCooldown > 0) {
+          setError(
+            `アカウント作成は ${signUpCooldown} 秒後にもう一度お試しください。`,
+          );
+          return;
+        }
+
         await signUp(email, password, displayName);
         setSuccessMessage(
-          "サインアップに成功しました。メールを確認してください。",
+          "アカウントを作成しました。確認メールを送信したので、メール内のリンクを開いてからログインしてください。",
         );
-        setIsSignUp(false);
+        setMode("login");
         setDisplayName("");
-      } else {
-        // ログイン処理
-        await signIn(email, password);
-        // ログイン成功後、ホームページにリダイレクト
-        router.push("/");
+        setEmail("");
+        setPassword("");
+        setSignUpCooldown(60);
+        return;
       }
+
+      const { user } = await signIn(email, password);
+      router.push(getDefaultViewPath(user?.user_metadata?.settings));
     } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("エラーが発生しました");
-      }
+      setError(getFriendlyError(err));
     } finally {
       setIsLoading(false);
     }
   };
 
+  const title = isReset
+    ? "パスワード再設定"
+    : isSignUp
+      ? "アカウント作成"
+      : "ログイン";
+
   return (
-    <div className="min-h-dvh flex items-center justify-center bg-gray-50 py-6 px-4 sm:py-12 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-2xl sm:text-3xl font-extrabold text-gray-900">
-            {isSignUp ? "アカウント作成" : "ログイン"}
-          </h2>
-        </div>
-
-        {error && (
-          <div className="rounded-md bg-red-50 p-4">
-            <p className="text-base sm:text-sm font-medium text-red-800 [overflow-wrap:anywhere]">{error}</p>
-          </div>
-        )}
-
-        {successMessage && (
-          <div className="rounded-md bg-green-50 p-4">
-            <p className="text-base sm:text-sm font-medium text-green-800 [overflow-wrap:anywhere]">
-              {successMessage}
+    <main className="min-h-dvh bg-gray-50 px-4 py-6 sm:px-6 sm:py-12 lg:px-8">
+      <div className="mx-auto flex min-h-[calc(100vh-6rem)] w-full max-w-md items-center">
+        <section className="w-full space-y-8">
+          <header className="text-center">
+            <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
+            <p className="mt-3 text-sm text-gray-600 [overflow-wrap:anywhere]">
+              {isReset
+                ? "登録済みのメールアドレスに再設定リンクを送ります。"
+                : "Shukatsu OS にアクセスするには認証してください。"}
             </p>
-          </div>
-        )}
+          </header>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {isSignUp && (
-            <div>
-              <label htmlFor="displayName" className="sr-only">
-                表示名
-              </label>
-              <input
-                id="displayName"
-                type="text"
-                autoComplete="nickname"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="表示名"
-                className="appearance-none rounded-none relative block min-h-11 w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-base text-gray-900 rounded-t-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-              />
+          {error && (
+            <div className="rounded-md bg-red-50 p-4" role="alert">
+              <p className="text-base font-medium text-red-800 [overflow-wrap:anywhere] sm:text-sm">{error}</p>
             </div>
           )}
 
-          <div>
-            <label htmlFor="email" className="sr-only">
-              メールアドレス
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              autoCapitalize="none"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="メールアドレス"
-              required
-              className={`appearance-none rounded-none relative block min-h-11 w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-base text-gray-900 ${
-                isSignUp ? "rounded-none" : "rounded-t-md"
-              } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
-            />
+          {successMessage && (
+            <div className="rounded-md bg-green-50 p-4">
+              <p className="text-base font-medium text-green-800 [overflow-wrap:anywhere] sm:text-sm">
+                {successMessage}
+              </p>
+            </div>
+          )}
+
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            {isSignUp && (
+              <div>
+                <label
+                  htmlFor="displayName"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  表示名
+                </label>
+                <input
+                  id="displayName"
+                  type="text"
+                  autoComplete="nickname"
+                  value={displayName}
+                  onChange={(event) => setDisplayName(event.target.value)}
+                  placeholder="山田 太郎"
+                  className="mt-1 block min-h-11 w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm"
+                />
+              </div>
+            )}
+
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700"
+              >
+                メールアドレス
+              </label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                autoCapitalize="none"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="you@example.com"
+                required
+                className="mt-1 block min-h-11 w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm"
+              />
+            </div>
+
+            {!isReset && (
+              <div>
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  パスワード
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  autoComplete={isSignUp ? "new-password" : "current-password"}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="6文字以上"
+                  minLength={6}
+                  required
+                  className="mt-1 block min-h-11 w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm"
+                />
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isLoading || (isSignUp && signUpCooldown > 0)}
+              className="flex min-h-11 w-full items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
+            >
+              {isLoading
+                ? "処理中..."
+                : isReset
+                  ? "再設定メールを送信"
+                  : isSignUp
+                    ? signUpCooldown > 0
+                      ? `${signUpCooldown}秒後に再試行`
+                      : "アカウント作成"
+                    : "ログイン"}
+            </button>
+          </form>
+
+          <div className="space-y-3 text-center text-sm">
+            {!isReset && (
+              <button
+                type="button"
+                onClick={() => switchMode("reset")}
+                className="inline-flex min-h-11 items-center px-2 text-blue-600 hover:text-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+              >
+                パスワードを忘れた方
+              </button>
+            )}
+
+            <div>
+              {isSignUp ? (
+                <button
+                  type="button"
+                  onClick={() => switchMode("login")}
+                  className="inline-flex min-h-11 items-center px-2 text-blue-600 hover:text-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                >
+                  ログイン画面に戻る
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => switchMode("signup")}
+                  className="inline-flex min-h-11 items-center px-2 text-blue-600 hover:text-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                >
+                  アカウントを作成する
+                </button>
+              )}
+            </div>
+
+            {isReset && (
+              <button
+                type="button"
+                onClick={() => switchMode("login")}
+                className="inline-flex min-h-11 items-center px-2 text-blue-600 hover:text-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+              >
+                ログイン画面に戻る
+              </button>
+            )}
           </div>
-
-          <div>
-            <label htmlFor="password" className="sr-only">
-              パスワード
-            </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete={isSignUp ? "new-password" : "current-password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="パスワード"
-              required
-              className="appearance-none rounded-none relative block min-h-11 w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-base text-gray-900 rounded-b-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="group relative min-h-11 w-full flex items-center justify-center py-2 px-4 border border-transparent text-base sm:text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isLoading ? "処理中..." : isSignUp ? "アカウント作成" : "ログイン"}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setIsSignUp(!isSignUp);
-              setError(null);
-            }}
-            className="min-h-11 w-full rounded-md px-2 py-2 text-base sm:text-sm text-blue-600 hover:text-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-          >
-            {isSignUp ? "ログイン画面に戻る" : "アカウントを作成する"}
-          </button>
-        </form>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
