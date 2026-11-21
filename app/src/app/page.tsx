@@ -113,6 +113,10 @@ export default async function Home() {
               選考管理ボードを見る
             </Link>
 
+            <Link href="/interviews" className="inline-flex min-h-11 items-center rounded-md bg-blue-600 px-5 py-2 text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-blue-600">
+              面接ログを見る
+            </Link>
+
             <Link
               href="/calendar"
               className="px-5 py-2 rounded-md bg-violet-600 text-white hover:bg-violet-700"
@@ -229,7 +233,6 @@ export default async function Home() {
                 次のおすすめ実装
               </h4>
               <ul className="space-y-2 text-slate-700">
-                <li>・面接ログ機能の追加</li>
                 <li>・ESテンプレートの追加</li>
                 <li>・締切タスク管理の追加</li>
                 <li>・カレンダーで予定を登録・編集</li>
