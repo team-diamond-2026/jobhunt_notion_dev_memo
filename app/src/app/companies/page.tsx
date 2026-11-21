@@ -103,29 +103,29 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
   const hasFilters = Boolean(keyword || industry || status !== "all");
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-dvh bg-slate-100">
       <nav className="border-b bg-white">
-        <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <div className="mx-auto flex min-h-16 max-w-7xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <h1 className="text-2xl font-bold text-slate-950">企業一覧</h1>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="grid w-full grid-cols-2 items-center gap-2 sm:flex sm:w-auto sm:flex-wrap sm:gap-3">
             <Link href="/interviews" className="inline-flex min-h-11 items-center rounded-md px-3 py-2 text-blue-600 hover:underline focus-visible:outline-2 focus-visible:outline-blue-600">面接ログ</Link>
-            <Link href="/" className="text-sm text-blue-600 hover:underline">
+            <Link href="/" className="inline-flex min-h-11 items-center justify-center rounded-md px-3 py-2 text-sm text-blue-600 hover:underline focus-visible:outline-2 focus-visible:outline-blue-600">
               ダッシュボード
             </Link>
             <Link
               href="/companies/board"
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+              className="inline-flex min-h-11 items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
             >
               選考ボード
             </Link>
-            <Link href="/settings" className="text-sm text-blue-600 hover:underline">
+            <Link href="/settings" className="inline-flex min-h-11 items-center justify-center rounded-md px-3 py-2 text-sm text-blue-600 hover:underline focus-visible:outline-2 focus-visible:outline-blue-600">
               設定
             </Link>
-            <form action="/logout" method="post">
+            <form action="/logout" method="post" className="contents sm:block">
               <button
                 type="submit"
-                className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                className="min-h-11 w-full rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
               >
                 ログアウト
               </button>
@@ -134,8 +134,8 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
         </div>
       </nav>
 
-      <main className="mx-auto max-w-7xl space-y-8 px-4 py-8">
-        <section className="rounded-xl bg-white p-6 shadow">
+      <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:space-y-8 sm:px-6 sm:py-8">
+        <section className="rounded-xl bg-white p-4 shadow sm:p-6">
           <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
             <div>
               <h2 className="text-2xl font-bold text-slate-950">
@@ -150,8 +150,8 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
             </span>
           </div>
 
-          <form action={createCompany} className="mt-5 grid gap-4 lg:grid-cols-5">
-            <div className="lg:col-span-2">
+          <form action={createCompany} className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="min-w-0 sm:col-span-2 lg:col-span-2">
               <label
                 htmlFor="company_name"
                 className="block text-sm font-medium text-slate-700"
@@ -162,15 +162,16 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
                 id="company_name"
                 name="company_name"
                 type="text"
+                autoComplete="organization"
                 required
                 placeholder="例: 株式会社サンプル"
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+                className="mt-1 min-h-11 w-full min-w-0 rounded-md border border-slate-300 px-3 py-2 text-base text-slate-950 focus-visible:outline-2 focus-visible:outline-blue-600 sm:text-sm"
               />
             </div>
 
             <IndustryFields />
 
-            <div>
+            <div className="min-w-0">
               <label
                 htmlFor="motivation_level"
                 className="block text-sm font-medium text-slate-700"
@@ -181,7 +182,7 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
                 id="motivation_level"
                 name="motivation_level"
                 defaultValue="3"
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+                className="mt-1 min-h-11 w-full min-w-0 rounded-md border border-slate-300 px-3 py-2 text-base text-slate-950 focus-visible:outline-2 focus-visible:outline-blue-600 sm:text-sm"
               >
                 <option value="0">0</option>
                 <option value="1">1</option>
@@ -192,7 +193,7 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
               </select>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <label
                 htmlFor="selection_status"
                 className="block text-sm font-medium text-slate-700"
@@ -203,7 +204,7 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
                 id="selection_status"
                 name="selection_status"
                 defaultValue={SELECTION_STATUS_OPTIONS[0]}
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+                className="mt-1 min-h-11 w-full min-w-0 rounded-md border border-slate-300 px-3 py-2 text-base text-slate-950 focus-visible:outline-2 focus-visible:outline-blue-600 sm:text-sm"
               >
                 {SELECTION_STATUS_OPTIONS.map((option) => (
                   <option key={option} value={option}>
@@ -213,7 +214,7 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
               </select>
             </div>
 
-            <div className="lg:col-span-4">
+            <div className="min-w-0 sm:col-span-2 lg:col-span-4">
               <label
                 htmlFor="memo"
                 className="block text-sm font-medium text-slate-700"
@@ -225,15 +226,15 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
                 name="memo"
                 rows={3}
                 placeholder="企業研究メモ、気になる点、次に確認すること"
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+                className="mt-1 min-h-11 w-full min-w-0 rounded-md border border-slate-300 px-3 py-2 text-base text-slate-950 focus-visible:outline-2 focus-visible:outline-blue-600 sm:text-sm"
               />
             </div>
 
-            <div className="flex items-end">
+            <div className="flex items-end sm:col-span-2 lg:col-span-1">
               <button
                 type="submit"
                 disabled
-                className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+                className="min-h-11 w-full rounded-md bg-blue-600 px-4 py-2 text-base font-medium text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:bg-slate-400 sm:text-sm"
               >
                 企業を登録
               </button>
@@ -241,7 +242,7 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
           </form>
         </section>
 
-        <section className="rounded-xl bg-white p-6 shadow">
+        <section className="rounded-xl bg-white p-4 shadow sm:p-6">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>
               <h2 className="text-2xl font-bold text-slate-950">
@@ -258,9 +259,9 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
               action="/companies"
               method="get"
               role="search"
-              className="grid gap-3 md:grid-cols-5"
+              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5"
             >
-              <div>
+              <div className="min-w-0">
                 <label
                   htmlFor="keyword"
                   className="block text-sm font-medium text-slate-700"
@@ -273,11 +274,11 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
                   type="search"
                   defaultValue={keyword}
                   placeholder="企業名で検索"
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+                  className="mt-1 min-h-11 w-full min-w-0 rounded-md border border-slate-300 px-3 py-2 text-base text-slate-950 focus-visible:outline-2 focus-visible:outline-blue-600 sm:text-sm"
                 />
               </div>
 
-              <div>
+              <div className="min-w-0">
                 <label
                   htmlFor="industry"
                   className="block text-sm font-medium text-slate-700"
@@ -290,11 +291,11 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
                   type="search"
                   defaultValue={industry}
                   placeholder="業界で絞り込み"
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+                  className="mt-1 min-h-11 w-full min-w-0 rounded-md border border-slate-300 px-3 py-2 text-base text-slate-950 focus-visible:outline-2 focus-visible:outline-blue-600 sm:text-sm"
                 />
               </div>
 
-              <div>
+              <div className="min-w-0">
                 <label
                   htmlFor="status"
                   className="block text-sm font-medium text-slate-700"
@@ -305,7 +306,7 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
                   id="status"
                   name="status"
                   defaultValue={status}
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+                  className="mt-1 min-h-11 w-full min-w-0 rounded-md border border-slate-300 px-3 py-2 text-base text-slate-950 focus-visible:outline-2 focus-visible:outline-blue-600 sm:text-sm"
                 >
                   <option value="all">すべて</option>
                   {SELECTION_STATUS_OPTIONS.map((option) => (
@@ -316,7 +317,7 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
                 </select>
               </div>
 
-              <div>
+              <div className="min-w-0">
                 <label
                   htmlFor="sort"
                   className="block text-sm font-medium text-slate-700"
@@ -327,7 +328,7 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
                   id="sort"
                   name="sort"
                   defaultValue={sort}
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+                  className="mt-1 min-h-11 w-full min-w-0 rounded-md border border-slate-300 px-3 py-2 text-base text-slate-950 focus-visible:outline-2 focus-visible:outline-blue-600 sm:text-sm"
                 >
                   {SORT_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -337,16 +338,16 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
                 </select>
               </div>
 
-              <div className="flex items-end gap-2">
+              <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-1">
                 <button
                   type="submit"
-                  className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+                  className="inline-flex min-h-11 flex-1 items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
                 >
                   検索
                 </button>
                 <Link
                   href="/companies"
-                  className="rounded-md bg-slate-200 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-slate-300"
+                  className="inline-flex min-h-11 flex-1 items-center justify-center rounded-md bg-slate-200 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-slate-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
                 >
                   リセット
                 </Link>
@@ -372,18 +373,18 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
               {companies.map((company) => (
                 <article
                   key={company.id}
-                  className="flex min-h-64 flex-col justify-between rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+                  className="flex min-h-64 min-w-0 flex-col justify-between rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
                 >
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <Link
                           href={`/companies/${company.id}`}
-                          className="text-lg font-semibold text-slate-950 hover:text-blue-600 hover:underline"
+                          className="text-lg font-semibold text-slate-950 [overflow-wrap:anywhere] hover:text-blue-600 hover:underline"
                         >
                           {company.company_name}
                         </Link>
-                        <p className="mt-1 text-sm text-slate-600">
+                        <p className="mt-1 text-sm text-slate-600 [overflow-wrap:anywhere]">
                           {company.industry || "業界未設定"}
                         </p>
                       </div>
@@ -411,26 +412,26 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
                       </div>
                     </div>
 
-                    <p className="line-clamp-3 text-sm text-slate-700">
+                    <p className="line-clamp-3 whitespace-pre-wrap break-words text-sm text-slate-700">
                       {company.memo || "メモはまだありません。"}
                     </p>
                   </div>
 
-                  <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                  <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
                     <span className="text-xs text-slate-500">
                       更新: {getUpdatedLabel(company.updated_at)}
                     </span>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Link
                         href={`/companies/${company.id}`}
-                        className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                        className="inline-flex min-h-11 items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
                       >
                         詳細
                       </Link>
                       <Link
                         href={`/companies/${company.id}/edit`}
-                        className="rounded-md bg-slate-200 px-3 py-1.5 text-sm font-medium text-slate-950 hover:bg-slate-300"
+                        className="inline-flex min-h-11 items-center rounded-md bg-slate-200 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-slate-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
                       >
                         編集
                       </Link>
@@ -442,7 +443,7 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
                         />
                         <button
                           type="submit"
-                          className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
+                          className="min-h-11 rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
                         >
                           削除
                         </button>

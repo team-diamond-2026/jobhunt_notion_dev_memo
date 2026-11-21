@@ -115,24 +115,24 @@ export default async function Home() {
   const upcomingEvents = (eventData ?? []) as CalendarEvent[];
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-dvh bg-slate-100">
       <nav className="border-b bg-white">
-        <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:flex-nowrap sm:py-0">
+        <div className="mx-auto flex min-h-16 max-w-7xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <h1 className="text-xl font-bold text-black sm:text-2xl">Job Hunt Dashboard</h1>
 
-          <div className="flex items-center gap-3 sm:gap-4">
-            <span className="hidden text-slate-700 md:inline">
+          <div className="flex min-w-0 items-center justify-between gap-3 sm:justify-end sm:gap-4">
+            <span className="min-w-0 text-slate-700 [overflow-wrap:anywhere]">
               {user.user_metadata?.display_name || user.email}
             </span>
 
-            <Link href="/settings" className="text-sm text-blue-600 hover:underline">
+            <Link href="/settings" className="inline-flex min-h-11 shrink-0 items-center rounded-md px-2 text-sm text-blue-600 hover:underline focus-visible:outline-2 focus-visible:outline-blue-600">
               設定
             </Link>
 
-            <form action="/logout" method="post">
+            <form action="/logout" method="post" className="shrink-0">
               <button
                 type="submit"
-                className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700"
+                className="min-h-11 rounded-md bg-red-600 px-4 py-2 text-white hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
               >
                 ログアウト
               </button>
@@ -141,51 +141,51 @@ export default async function Home() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-        <section className="bg-white rounded-xl shadow p-8">
-          <h2 className="text-3xl font-bold text-black mb-3 [overflow-wrap:anywhere]">
+      <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:space-y-8 sm:px-6 sm:py-8">
+        <section className="rounded-xl bg-white p-4 shadow sm:p-8">
+          <h2 className="mb-3 text-2xl font-bold text-black [overflow-wrap:anywhere] sm:text-3xl">
             ようこそ、{user.user_metadata?.display_name || user.email}さん
           </h2>
           <p className="text-slate-600">
             就活管理アプリのダッシュボードです。企業情報や選考状況をここから確認できます。
           </p>
 
-          <div className="flex flex-wrap gap-3 mt-6">
+          <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap">
             <Link
               href="/companies"
-              className="px-5 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-blue-600 px-5 py-2 text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:w-auto"
             >
               企業一覧を見る
             </Link>
 
             <Link
               href="/companies/board"
-              className="px-5 py-2 rounded-md bg-slate-800 text-white hover:bg-slate-900"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-slate-800 px-5 py-2 text-white hover:bg-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 sm:w-auto"
             >
               選考管理ボードを見る
             </Link>
 
-            <Link href="/interviews" className="inline-flex min-h-11 items-center rounded-md bg-blue-600 px-5 py-2 text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-blue-600">
+            <Link href="/interviews" className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-blue-600 px-5 py-2 text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-blue-600 sm:w-auto">
               面接ログを見る
             </Link>
 
             <Link
               href="/calendar"
-              className="px-5 py-2 rounded-md bg-violet-600 text-white hover:bg-violet-700"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-violet-600 px-5 py-2 text-white hover:bg-violet-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 sm:w-auto"
             >
               カレンダーを見る
             </Link>
 
             <Link
               href="/es"
-              className="px-5 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-emerald-600 px-5 py-2 text-white hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 sm:w-auto"
             >
               ESを管理
             </Link>
 
             <Link
               href={`/companies?status=${SELECTION_STATUS_OPTIONS[0]}`}
-              className="px-5 py-2 rounded-md bg-slate-200 text-black hover:bg-slate-300"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-slate-200 px-5 py-2 text-black hover:bg-slate-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 sm:w-auto"
             >
               未応募を確認
             </Link>
@@ -197,7 +197,7 @@ export default async function Home() {
           className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4"
         >
           {kpis.map((kpi) => (
-            <article key={kpi.label} className="rounded-xl bg-white p-6 shadow">
+            <article key={kpi.label} className="rounded-xl bg-white p-4 shadow sm:p-6">
               <p className="mb-2 text-sm text-slate-500">{kpi.label}</p>
               <p className="text-3xl font-bold text-black">{kpi.value}</p>
               <p className="mt-2 text-sm text-slate-600">{kpi.description}</p>
@@ -208,10 +208,10 @@ export default async function Home() {
         <UpcomingEvents events={upcomingEvents} hasError={Boolean(eventError)} />
 
         <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <div className="bg-white rounded-xl shadow p-6">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div className="rounded-xl bg-white p-4 shadow sm:p-6">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <h3 className="text-2xl font-bold text-black">最近更新した企業</h3>
-              <Link href="/companies" className="text-blue-600 hover:underline">
+              <Link href="/companies" className="inline-flex min-h-11 items-center rounded-md px-2 text-blue-600 hover:underline focus-visible:outline-2 focus-visible:outline-blue-600">
                 一覧を見る
               </Link>
             </div>
@@ -223,7 +223,7 @@ export default async function Home() {
                 {recentCompanies.map((company) => (
                   <div
                     key={company.id}
-                    className="border rounded-lg p-4 flex items-center justify-between gap-4"
+                    className="flex min-w-0 flex-wrap items-center justify-between gap-4 rounded-lg border p-4 sm:flex-nowrap"
                   >
                     <div className="min-w-0">
                       <Link
@@ -247,7 +247,7 @@ export default async function Home() {
             )}
           </div>
 
-          <div className="bg-white rounded-xl shadow p-6">
+          <div className="rounded-xl bg-white p-4 shadow sm:p-6">
             <h3 className="text-2xl font-bold text-black mb-4">アカウント情報</h3>
 
             <dl className="space-y-4">
@@ -258,7 +258,7 @@ export default async function Home() {
 
               <div>
                 <dt className="text-sm text-slate-500">ユーザーID</dt>
-                <dd className="text-black break-all">{user.id}</dd>
+                <dd className="text-black font-mono text-sm [overflow-wrap:anywhere]">{user.id}</dd>
               </div>
 
               <div>
