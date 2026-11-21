@@ -6,6 +6,8 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import * as jsxRuntime from "react/jsx-runtime";
 import typescript from "typescript";
+import * as calendar from "../src/lib/calendar.ts";
+import * as selectionStatus from "../src/lib/selection-status.ts";
 
 const source = fs.readFileSync(new URL("../src/app/page.tsx", import.meta.url), "utf8");
 const compiled = typescript.transpileModule(source, {
@@ -23,6 +25,10 @@ const companies = [
   "二次面接",
   "最終面接",
   "内定",
+  "ES提出",
+  "Webテスト",
+  "1次面接",
+  "辞退",
 ].map((selection_status, index) => ({
   id: String(index),
   company_name: `企業${index}`,
@@ -56,9 +62,9 @@ function loadPage(records = companies) {
         },
       }),
     },
-    "../lib/selection-status": { SELECTION_STATUS_OPTIONS: ["未応募"] },
+    "../lib/selection-status": selectionStatus,
     "@/components/calendar/upcoming-events": { UpcomingEvents: () => null },
-    "@/lib/calendar": {},
+    "@/lib/calendar": calendar,
   };
   const exports = {};
   vm.runInNewContext(compiled, { exports, require: (name) => dependencies[name], Date });
@@ -69,11 +75,11 @@ test("KPIは正規化済みの選考ステータスを集計し、0件も表示�
   const html = renderToStaticMarkup(await loadPage()());
 
   for (const [label, value] of [
-    ["登録企業数", 7],
+    ["登録企業数", 11],
     ["未応募", 1],
-    ["応募済み", 1],
-    ["書類選考中", 1],
-    ["面接中", 3],
+    ["応募済み", 2],
+    ["書類選考中", 2],
+    ["面接中", 4],
     ["内定", 1],
   ]) {
     assert.match(html, new RegExp(`${label}</p><p[^>]*>${value}</p>`));
