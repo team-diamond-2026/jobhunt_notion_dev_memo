@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run && node --test tests/*.test.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:es": "node --experimental-strip-types --test tests/es*.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",

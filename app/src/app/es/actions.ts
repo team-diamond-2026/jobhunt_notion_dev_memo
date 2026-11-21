@@ -3,10 +3,24 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isEsDocumentType } from "@/lib/es";
+import type { EsSaveState } from "@/lib/es";
 import { createClient } from "@/lib/supabase/server";
 
 function getText(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
+}
+
+function failedSave(previous: EsSaveState, formData: FormData, error: string): EsSaveState {
+  return {
+    attempt: (previous?.attempt ?? 0) + 1,
+    error,
+    values: {
+      company_id: getText(formData, "company_id"),
+      title: String(formData.get("title") ?? ""),
+      doc_type: getText(formData, "doc_type"),
+      content: String(formData.get("content") ?? ""),
+    },
+  };
 }
 
 function redirectWithError(path: string, message: string): never {
@@ -59,7 +73,7 @@ async function ownsCompany(
   return Boolean(data);
 }
 
-export async function createEsDocument(formData: FormData) {
+export async function createEsDocument(previous: EsSaveState, formData: FormData): Promise<EsSaveState> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -69,21 +83,17 @@ export async function createEsDocument(formData: FormData) {
     redirect("/login");
   }
 
+  const failure = (error: string) => failedSave(previous, formData, error);
   let values: ReturnType<typeof parseDocumentValues>;
 
   try {
     values = parseDocumentValues(formData);
   } catch (error) {
-    const companyId = getText(formData, "company_id");
-    const path = companyId ? `/es/new?company=${encodeURIComponent(companyId)}` : "/es/new";
-    redirectWithError(
-      path,
-      error instanceof Error ? error.message : "入力内容を確認してください",
-    );
+    return failure(error instanceof Error ? error.message : "入力内容を確認してください");
   }
 
   if (!(await ownsCompany(supabase, user.id, values.company_id))) {
-    redirectWithError("/es/new", "選択した企業を確認できません");
+    return failure("選択した企業を確認できません");
   }
 
   const { data, error } = await supabase
@@ -93,7 +103,7 @@ export async function createEsDocument(formData: FormData) {
     .single();
 
   if (error || !data) {
-    redirectWithError("/es/new", "ESを保存できませんでした");
+    return failure("ESを保存できませんでした");
   }
 
   revalidatePath("/es");
@@ -101,9 +111,8 @@ export async function createEsDocument(formData: FormData) {
   redirect(`/es/${data.id}?saved=created`);
 }
 
-export async function updateEsDocument(formData: FormData) {
+export async function updateEsDocument(previous: EsSaveState, formData: FormData): Promise<EsSaveState> {
   const documentId = getText(formData, "document_id");
-  const editPath = documentId ? `/es/${documentId}/edit` : "/es";
   const supabase = await createClient();
   const {
     data: { user },
@@ -114,7 +123,7 @@ export async function updateEsDocument(formData: FormData) {
   }
 
   if (!documentId) {
-    redirectWithError(editPath, "更新するESを確認できません");
+    return failedSave(previous, formData, "更新するESを確認できません");
   }
 
   let values: ReturnType<typeof parseDocumentValues>;
@@ -122,14 +131,14 @@ export async function updateEsDocument(formData: FormData) {
   try {
     values = parseDocumentValues(formData);
   } catch (error) {
-    redirectWithError(
-      editPath,
+    return failedSave(
+      previous, formData,
       error instanceof Error ? error.message : "入力内容を確認してください",
     );
   }
 
   if (!(await ownsCompany(supabase, user.id, values.company_id))) {
-    redirectWithError(editPath, "選択した企業を確認できません");
+    return failedSave(previous, formData, "選択した企業を確認できません");
   }
 
   const { data, error } = await supabase
@@ -140,7 +149,7 @@ export async function updateEsDocument(formData: FormData) {
     .maybeSingle();
 
   if (error || !data) {
-    redirectWithError(editPath, "ESを更新できませんでした");
+    return failedSave(previous, formData, "ESを更新できませんでした");
   }
 
   revalidatePath("/es");
@@ -177,5 +186,7 @@ export async function deleteEsDocument(formData: FormData) {
   }
 
   revalidatePath("/es");
+  revalidatePath(`/es/${documentId}`);
+  revalidatePath(`/es/${documentId}/edit`);
   redirect("/es?deleted=1");
 }
