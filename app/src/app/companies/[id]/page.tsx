@@ -7,6 +7,7 @@ import { createClient } from "../../../lib/supabase/server";
 import { updateCompany } from "../actions";
 import {
   getSelectionStatusIndex,
+  normalizeSelectionStatus,
   SELECTION_STATUS_OPTIONS,
 } from "../../../lib/selection-status";
 
@@ -64,7 +65,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const company = data as Company;
+  const company = { ...data, selection_status: normalizeSelectionStatus(data.selection_status) } as Company;
   const interviewLogs = await getInterviewLogs(supabase, user.id, company.id);
   const progressIndex = getProgressIndex(company.selection_status);
   const motivationLevel = Math.min(Math.max(company.motivation_level, 0), 5);
@@ -72,15 +73,16 @@ export default async function CompanyDetailPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-slate-100">
       <nav className="border-b bg-white">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-          <Link href="/companies" className="text-blue-600 hover:underline">
+        <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+          <Link href="/companies" className="inline-flex min-h-11 items-center text-blue-600 hover:underline">
             企業一覧へ戻る
           </Link>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <Link href="/companies/board" className="inline-flex min-h-11 items-center text-sm text-blue-600 hover:underline">選考ボードへ戻る</Link>
             <Link
               href={`/companies/${company.id}/edit`}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="inline-flex min-h-11 items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
             >
               詳細編集
             </Link>
@@ -88,7 +90,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
             <form action="/logout" method="post">
               <button
                 type="submit"
-                className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                className="min-h-11 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
               >
                 ログアウト
               </button>
@@ -97,10 +99,10 @@ export default async function CompanyDetailPage({ params }: PageProps) {
         </div>
       </nav>
 
-      <main className="mx-auto max-w-6xl px-4 py-8">
+      <main className="mx-auto max-w-6xl px-3 py-5 [overflow-wrap:anywhere] sm:px-4 sm:py-8">
         <header className="mb-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-medium text-slate-500">企業詳細</p>
               <h1 className="mt-2 text-3xl font-bold text-slate-950">
                 {company.company_name}
@@ -122,7 +124,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
         </header>
 
         <div className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
-          <section className="space-y-6">
+          <section className="min-w-0 space-y-6">
             <div className="rounded-xl bg-white p-6 shadow">
               <h2 className="text-xl font-bold text-slate-950">基本情報</h2>
 
@@ -216,7 +218,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
             </div>
           </section>
 
-          <aside className="space-y-6">
+          <aside className="min-w-0 space-y-6">
             <section aria-labelledby="company-interviews" className="min-w-0 space-y-4 [overflow-wrap:anywhere]">
               <h2 id="company-interviews" className="text-xl font-bold text-slate-950">面接ログ</h2>
               <div className="flex flex-col gap-2">
@@ -225,7 +227,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
               </div>
               <InterviewList logs={interviewLogs} companyId={company.id} />
             </section>
-            <form action={updateCompany} className="rounded-xl bg-white p-6 shadow">
+            <form id="company-update" action={updateCompany} className="scroll-mt-4 rounded-xl bg-white p-4 shadow sm:p-6">
               <input type="hidden" name="company_id" value={company.id} />
               <input
                 type="hidden"
@@ -254,7 +256,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
                     id="motivation_level"
                     name="motivation_level"
                     defaultValue={String(company.motivation_level)}
-                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+                    className="mt-1 min-h-11 w-full rounded-md border border-slate-300 px-3 py-2 text-base text-slate-950"
                   >
                     <option value="0">0</option>
                     <option value="1">1</option>
@@ -276,7 +278,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
                     id="selection_status"
                     name="selection_status"
                     defaultValue={company.selection_status}
-                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+                    className="mt-1 min-h-11 w-full rounded-md border border-slate-300 px-3 py-2 text-base text-slate-950"
                   >
                     {SELECTION_STATUS_OPTIONS.map((status, index) => (
                       <option
@@ -302,13 +304,13 @@ export default async function CompanyDetailPage({ params }: PageProps) {
                     name="memo"
                     rows={8}
                     defaultValue={company.memo ?? ""}
-                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950"
+                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-base text-slate-950"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  className="min-h-11 w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                 >
                   更新する
                 </button>
