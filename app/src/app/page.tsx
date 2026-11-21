@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "../lib/supabase/server";
 import { SELECTION_STATUS_OPTIONS } from "../lib/selection-status";
+import { UpcomingEvents } from "@/components/calendar/upcoming-events";
+import { CalendarEvent } from "@/lib/calendar";
 
 type Company = {
   id: string;
@@ -270,15 +272,25 @@ export default async function Home() {
   ];
 
   const recentCompanies = companies.slice(0, 5);
+  const now = new Date();
+  const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const { data: eventData, error: eventError } = await supabase
+    .from("events")
+    .select("id,title,event_type,start_at,end_at,related_company_id")
+    .gte("start_at", now.toISOString())
+    .lt("start_at", sevenDaysLater.toISOString())
+    .order("start_at", { ascending: true })
+    .limit(5);
+  const upcomingEvents = (eventData ?? []) as CalendarEvent[];
 
   return (
     <div className="min-h-screen bg-slate-100">
-      <nav className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-black">Job Hunt Dashboard</h1>
+      <nav className="border-b bg-white">
+        <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:flex-nowrap sm:py-0">
+          <h1 className="text-xl font-bold text-black sm:text-2xl">Job Hunt Dashboard</h1>
 
-          <div className="flex items-center gap-4">
-            <span className="text-slate-700">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <span className="hidden text-slate-700 md:inline">
               {user.user_metadata?.display_name || user.email}
             </span>
 
@@ -322,6 +334,24 @@ export default async function Home() {
               選考管理ボードを見る
             </Link>
 
+            <Link href="/interviews" className="inline-flex min-h-11 items-center rounded-md bg-blue-600 px-5 py-2 text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-blue-600">
+              面接ログを見る
+            </Link>
+
+            <Link
+              href="/calendar"
+              className="px-5 py-2 rounded-md bg-violet-600 text-white hover:bg-violet-700"
+            >
+              カレンダーを見る
+            </Link>
+
+            <Link
+              href="/es"
+              className="px-5 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
+            >
+              ESを管理
+            </Link>
+
             <Link
               href={`/companies?status=${SELECTION_STATUS_OPTIONS[0]}`}
               className="px-5 py-2 rounded-md bg-slate-200 text-black hover:bg-slate-300"
@@ -343,6 +373,8 @@ export default async function Home() {
             </article>
           ))}
         </section>
+
+        <UpcomingEvents events={upcomingEvents} hasError={Boolean(eventError)} />
 
         <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <div className="bg-white rounded-xl shadow p-6">
@@ -413,10 +445,9 @@ export default async function Home() {
                 次のおすすめ実装
               </h4>
               <ul className="space-y-2 text-slate-700">
-                <li>・面接ログ機能の追加</li>
-                <li>・ES管理ページの追加</li>
+                <li>・ESテンプレートの追加</li>
                 <li>・締切タスク管理の追加</li>
-                <li>・カレンダー表示の追加</li>
+                <li>・カレンダーで予定を登録・編集</li>
               </ul>
             </div>
           </div>
