@@ -3,7 +3,12 @@ import { redirect } from "next/navigation";
 import { createClient } from "../lib/supabase/server";
 import { SELECTION_STATUS_OPTIONS } from "../lib/selection-status";
 import { UpcomingEvents } from "@/components/calendar/upcoming-events";
-import { CalendarEvent } from "@/lib/calendar";
+import {
+  CalendarEvent,
+  CALENDAR_EVENT_COLUMNS,
+  getUpcomingEventRange,
+  UPCOMING_EVENT_LIMIT,
+} from "@/lib/calendar";
 
 type Company = {
   id: string;
@@ -51,15 +56,14 @@ export default async function Home() {
   ).length;
 
   const recentCompanies = companies.slice(0, 5);
-  const now = new Date();
-  const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const upcomingRange = getUpcomingEventRange();
   const { data: eventData, error: eventError } = await supabase
     .from("events")
-    .select("id,title,event_type,start_at,end_at,related_company_id")
-    .gte("start_at", now.toISOString())
-    .lt("start_at", sevenDaysLater.toISOString())
+    .select(CALENDAR_EVENT_COLUMNS)
+    .gte("start_at", upcomingRange.startAt)
+    .lt("start_at", upcomingRange.endAtExclusive)
     .order("start_at", { ascending: true })
-    .limit(5);
+    .limit(UPCOMING_EVENT_LIMIT);
   const upcomingEvents = (eventData ?? []) as CalendarEvent[];
 
   return (
@@ -190,7 +194,7 @@ export default async function Home() {
                         {company.company_name}
                       </Link>
 
-                      <p className="text-sm text-slate-600 mt-1">
+                      <p className="text-sm text-slate-600 mt-1 [overflow-wrap:anywhere]">
                         業界: {company.industry || "未設定"}
                       </p>
                     </div>
